@@ -10,7 +10,7 @@ const AdminSignupKey = () => {
   useEffect(() => {
     const fetchKeys = async () => {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/auth/signup-keys", {
+      const res = await axios.get("https://rms-6one.onrender.com/api/auth/signup-keys", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setKeys(res.data);
@@ -22,7 +22,7 @@ const AdminSignupKey = () => {
   const generateKey = async () => {
     const token = localStorage.getItem("token");
     const res = await axios.post(
-      "http://localhost:5000/api/auth/generate-key",
+      "https://rms-6one.onrender.com/api/auth/generate-key",
       {},
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -34,7 +34,7 @@ const AdminSignupKey = () => {
   // Delete key
   const deleteKey = async (id) => {
     const token = localStorage.getItem("token");
-    await axios.delete(`http://localhost:5000/api/auth/signup-key/${id}`, {
+    await axios.delete(`https://rms-6one.onrender.com/api/auth/signup-key/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     setKeys(keys.filter((key) => key._id !== id));

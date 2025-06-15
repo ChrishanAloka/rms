@@ -28,7 +28,7 @@ const CashierLanding = () => {
   const fetchMenus = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/auth/menus", {
+      const res = await axios.get("https://rms-6one.onrender.com/api/auth/menus", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMenus(res.data);
@@ -44,7 +44,7 @@ const CashierLanding = () => {
     const timer = setTimeout(async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://localhost:5000/api/auth/customer", {
+        const res = await axios.get("https://rms-6one.onrender.com/api/auth/customer", {
           params: { phone: customer.phone },
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -144,7 +144,7 @@ const CashierLanding = () => {
         changeDue: (paymentAmount - orderData.totalPrice).toFixed(2)
       };
 
-      const res = await axios.post("http://localhost:5000/api/auth/order", payload, {
+      const res = await axios.post("https://rms-6one.onrender.com/api/auth/order", payload, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -307,7 +307,7 @@ const CashierLanding = () => {
             <div key={menu._id} className="col-md-3 mb-3">
               <div className="card shadow-sm h-100 position-relative">
                 <img
-                  src={`http://localhost:5000${menu.imageUrl}`}
+                  src={`https://rms-6one.onrender.com${menu.imageUrl}`}
                   alt={menu.name}
                   style={{ height: "280px", objectFit: "cover" }}
                   className="card-img-top"

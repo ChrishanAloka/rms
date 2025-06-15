@@ -23,7 +23,7 @@ const MenuManagement = () => {
   useEffect(() => {
     const fetchMenus = async () => {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/auth/menus", {
+      const res = await axios.get("https://rms-6one.onrender.com/api/auth/menus", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMenus(res.data);
@@ -61,7 +61,7 @@ const MenuManagement = () => {
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(
-        "http://localhost:5000/api/auth/menu",
+        "https://rms-6one.onrender.com/api/auth/menu",
         formData,
         {
           headers: {
@@ -130,7 +130,7 @@ const MenuManagement = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.put(
-        `http://localhost:5000/api/auth/menu/${editingMenu}`,
+        `https://rms-6one.onrender.com/api/auth/menu/${editingMenu}`,
         formData,
         {
           headers: {
@@ -157,7 +157,7 @@ const MenuManagement = () => {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:5000/api/auth/menu/${id}`, {
+      await axios.delete(`https://rms-6one.onrender.com/api/auth/menu/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setMenus(menus.filter((menu) => menu._id !== id));
@@ -421,7 +421,7 @@ const MenuManagement = () => {
                     />
                   </div>
                   <img
-                    src={editPreview || `http://localhost:5000${editData.imageUrl}`}
+                    src={editPreview || `https://rms-6one.onrender.com${editData.imageUrl}`}
                     alt="Preview"
                     style={{ width: "100%", maxHeight: "200px", objectFit: "cover" }}
                   />
@@ -444,7 +444,7 @@ const MenuManagement = () => {
           <div key={menu._id} className="col-md-3 mb-3">
             <div className="card shadow-sm h-100 position-relative">
               <img
-                src={`http://localhost:5000${menu.imageUrl}`}
+                src={`https://rms-6one.onrender.com${menu.imageUrl}`}
                 alt={menu.name}
                 className="card-img-top"
                 style={{ height: "280px", objectFit: "fill" }}

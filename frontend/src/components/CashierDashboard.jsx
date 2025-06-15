@@ -13,7 +13,7 @@ const CashierDashboard = () => {
       const startOfDay = new Date(today.setHours(0, 0, 0, 0));
       const endOfDay = new Date(today.setHours(23, 59, 59, 999));
 
-      const res = await axios.get("http://localhost:5000/api/auth/orders", {
+      const res = await axios.get("https://rms-6one.onrender.com/api/auth/orders", {
         params: {
           startDate: startOfDay.toISOString(),
           endDate: endOfDay.toISOString()

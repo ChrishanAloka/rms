@@ -9,7 +9,7 @@ const AdminUsers = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/auth/users", {
+      const res = await axios.get("https://rms-6one.onrender.com/api/auth/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(res.data);
@@ -43,7 +43,7 @@ const AdminUsers = () => {
   const handleRoleChange = async (id, newRole) => {
     const token = localStorage.getItem("token");
     const res = await axios.put(
-      `http://localhost:5000/api/auth/user/${id}/role`,
+      `https://rms-6one.onrender.com/api/auth/user/${id}/role`,
       { role: newRole },
       {
         headers: { Authorization: `Bearer ${token}` },
@@ -61,7 +61,7 @@ const AdminUsers = () => {
   const handleDeactivate = async (id) => {
     const token = localStorage.getItem("token");
     await axios.put(
-      `http://localhost:5000/api/auth/user/${id}/deactivate`,
+      `https://rms-6one.onrender.com/api/auth/user/${id}/deactivate`,
       {},
       {
         headers: { Authorization: `Bearer ${token}` },

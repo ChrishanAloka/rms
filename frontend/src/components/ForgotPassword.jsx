@@ -15,7 +15,7 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/forgot-password", {
+      const res = await axios.post("https://rms-6one.onrender.com/api/auth/forgot-password", {
         email
       });
 

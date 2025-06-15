@@ -20,7 +20,7 @@ const CashierOrderHistory = () => {
     const params = new URLSearchParams(filters).toString();
 
     try {
-      const res = await axios.get(`http://localhost:5000/api/auth/orders?${params}`, {
+      const res = await axios.get(`https://rms-6one.onrender.com/api/auth/orders?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
