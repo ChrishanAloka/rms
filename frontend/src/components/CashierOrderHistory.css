@@ -1,0 +1,4 @@
+/* src/components/CashierOrderHistory.css */
+.badge.bg-warning.text-dark {
+  color: #fff !important; /* Fix warning text color */
+}

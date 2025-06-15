@@ -1,0 +1,130 @@
+// backend/controllers/authController.js
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+const SignupKey = require("../models/SignupKey");
+
+
+// controllers/authController.js
+exports.signup = async (req, res) => {
+  const { name, email, password, role , signupKey } = req.body;
+
+  console.log("Received body:", req.body); // ✅ Log this
+
+  if (["cashier", "kitchen"].includes(role)) {
+    if (!signupKey) {
+      return res.status(400).json({ error: "Signup key is required" });
+    }
+
+    const validKey = await SignupKey.findOne({ key: signupKey });
+
+    if (!validKey) {
+      return res.status(400).json({ error: "Invalid signup key" });
+    }
+  }
+
+  try {
+    const user = new User({ name, email, password, role });
+    await user.save();
+    res.status(201).json({ message: `${role} user created` });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// controllers/authController.js
+// backend/controllers/authController.js
+
+exports.login = async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+
+  if (!user || !(await user.comparePassword(password))) {
+    return res.status(400).json({ error: "Invalid credentials" });
+  }
+
+  // ❌ Block login if not active
+  if (!user.isActive) {
+    return res.status(403).json({ error: "Account is inactive" });
+  }
+
+  const token = jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
+
+  res.json({ token, role: user.role });
+};
+
+
+// controllers/authController.js
+
+// Get all keys
+exports.getSignupKeys = async (req, res) => {
+  try {
+    const keys = await SignupKey.find();
+    res.json(keys);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Generate a new key
+exports.generateSignupKey = async (req, res) => {
+  const key = Math.random().toString(36).substring(2, 15); // simple random key
+  const newKey = new SignupKey({ key });
+  await newKey.save();
+  res.json(newKey);
+};
+
+// Delete a key
+exports.deleteSignupKey = async (req, res) => {
+  const { id } = req.params;
+  await SignupKey.findByIdAndDelete(id);
+  res.json({ message: "Key deleted" });
+};
+
+// backend/controllers/authController.js
+
+// Get all users
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await User.find({}, "name email role isActive"); // exclude password
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// Update user role
+exports.updateUserRole = async (req, res) => {
+  const { id } = req.params;
+  const { role } = req.body;
+
+  if (!["admin", "cashier", "kitchen"].includes(role)) {
+    return res.status(400).json({ error: "Invalid role" });
+  }
+
+  try {
+    const updated = await User.findByIdAndUpdate(
+      id,
+      { role },
+      { new: true }
+    );
+    res.json({ role: updated.role });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update role" });
+  }
+};
+
+// Deactivate user
+exports.deactivateUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await User.findByIdAndUpdate(id, { isActive: false });
+    res.json({ message: "User deactivated" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to deactivate user" });
+  }
+};
