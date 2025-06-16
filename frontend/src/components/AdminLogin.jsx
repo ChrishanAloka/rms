@@ -1,34 +1,33 @@
 // src/components/AdminLogin.jsx
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+import { AuthContext } from "../context/auth-context";
 
 const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post("https://rms-6one.onrender.com/api/auth/login", {
-        email,
-        password,
-      });
+const handleLogin = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await axios.post("https://rms-6one.onrender.com/api/auth/login", { email, password });
+    const data = res.data;
 
-      if (res.data.role === "admin") {
-        localStorage.setItem("token", res.data.token);
-        setTimeout(() => {
-        navigate("/admin");
-        }, 100); // Wait for context/state to update
-      } else {
-        alert("Unauthorized access");
-      }
-    } catch (err) {
-      alert("Login failed. Please check your credentials.");
+    if (data.role !== "admin") {
+      alert("Unauthorized access");
+      return;
     }
-  };
+
+    login(data); // Comes from useAuth()
+    navigate("/admin"); // Redirect after login
+  } catch (err) {
+    alert("Login failed. Please check your credentials.");
+  }
+};
 
   return (
     <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light">

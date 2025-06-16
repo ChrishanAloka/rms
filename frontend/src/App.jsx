@@ -11,7 +11,7 @@ import KitchenSignup from "./components/KitchenSignup";
 import AdminSignup from "./components/AdminSignup";
 
 import Signup from './components/Signup';
-import Admin from './components/AdminLanding';
+
 import KitchenLanding from "./components/KitchenLanding";
 import KitchenBills from "./components/KitchenBills";
 

@@ -2,7 +2,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import { AuthProvider } from "./components/ProtectedRoute";
+// import { AuthProvider } from "./components/ProtectedRoute";
+import { AuthProvider } from "./context/auth-context";
 import App from "./App";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));

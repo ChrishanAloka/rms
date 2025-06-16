@@ -1,13 +1,15 @@
 // src/components/KitchenLogin.jsx
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+import { AuthContext } from "../context/auth-context";
 
 const KitchenLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -16,18 +18,18 @@ const KitchenLogin = () => {
         email,
         password,
       });
+      const data = res.data;
 
-      if (res.data.role === "kitchen") {
-        localStorage.setItem("token", res.data.token);
-        setTimeout(() => {
-        navigate("/kitchen");
-        }, 1000); // Wait for context/state to update
-      } else {
-        alert("Unauthorized access");
-      }
-    } catch (err) {
-      alert("Login failed. Please check your credentials.");
+      if (data.role !== "kitchen") {
+      alert("Unauthorized access");
+      return;
     }
+
+    login(data); // Comes from useAuth()
+    navigate("/kitchen"); // Redirect after login
+  } catch (err) {
+    alert("Login failed. Please check your credentials.");
+  }
   };
 
   return (

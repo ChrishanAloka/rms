@@ -15,15 +15,26 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       try {
         const decoded = JSON.parse(atob(token.split(".")[1]));
+
+        // ✅ Make sure decoded contains role
+        console.log("Decoded token:", decoded);
+
         setUser(decoded);
+        // Only auto-navigate if not already on a role-specific page
+        if (
+          window.location.pathname === "/" ||
+          window.location.pathname === "/login"
+        ) {
+          navigate(`/${decoded.role}`, { replace: true });
+        }
       } catch (err) {
         localStorage.removeItem("token");
         setUser(null);
-        navigate("/login");
+        navigate("/login", { replace: true });
       }
     } else {
       setUser(null);
-      navigate("/login");
+      navigate("/login", { replace: true });
     }
   }, [navigate]);
 
@@ -31,13 +42,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("token", data.token);
     const decoded = JSON.parse(atob(data.token.split(".")[1]));
     setUser(decoded);
-    navigate(`/${decoded.role}`);
+    navigate(`/${decoded.role}`); // ✅ Redirect based on role
   };
 
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
-    navigate("/");
+    navigate("/", { replace: true });
   };
 
   return (
@@ -47,7 +58,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context)
