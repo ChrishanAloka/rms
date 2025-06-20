@@ -1,37 +1,58 @@
 // src/components/AdminUsers.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import * as XLSX from "xlsx";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
 
-  // Load users
+  // Load users on mount
   useEffect(() => {
     const fetchUsers = async () => {
       const token = localStorage.getItem("token");
-      const res = await axios.get("https://rms-6one.onrender.com/api/auth/users", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUsers(res.data);
+      try {
+        const res = await axios.get("https://rms-6one.onrender.com/api/auth/users",  {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUsers(res.data);
+      } catch (err) {
+        console.error("Failed to load users:", err.message);
+      }
     };
+
     fetchUsers();
   }, []);
 
-  // Export to Excel
+  // Export to Excel using xlsx
   const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(users);
+    const filteredUsers = users.map((user) => ({
+      Name: user.name,
+      Email: user.email,
+      Role: user.role,
+      Status: user.isActive ? "Active" : "Inactive"
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(filteredUsers);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
     XLSX.writeFile(workbook, "users_report.xlsx");
   };
 
-  // Export to PDF
+  // Export to PDF using html2canvas + jsPDF
   const exportToPDF = () => {
     const input = document.getElementById("user-table");
+
+    if (!input) {
+      alert("Table not found!");
+      return;
+    }
+
     html2canvas(input).then((canvas) => {
       const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
-      const width = 210;
+      const pdf = new jsPDF("p", "pt", "a4");
+      const width = pdf.internal.pageSize.getWidth();
       const height = (canvas.height * width) / canvas.width;
 
       pdf.addImage(imgData, "PNG", 0, 0, width, height);
@@ -42,41 +63,48 @@ const AdminUsers = () => {
   // Update user role
   const handleRoleChange = async (id, newRole) => {
     const token = localStorage.getItem("token");
-    const res = await axios.put(
-      `https://rms-6one.onrender.com/api/auth/user/${id}/role`,
-      { role: newRole },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    setUsers((prev) =>
-      prev.map((user) =>
-        user._id === id ? { ...user, role: res.data.role } : user
-      )
-    );
+    try {
+      const res = await axios.put(
+        `https://rms-6one.onrender.com/api/auth/user/${id}/role`, 
+        { role: newRole },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      setUsers((prev) =>
+        prev.map((user) => (user._id === id ? { ...user, role: res.data.role } : user)
+      ));
+    } catch (err) {
+      console.error("Failed to update role:", err.message);
+    }
   };
 
   // Deactivate user
   const handleDeactivate = async (id) => {
-    const token = localStorage.getItem("token");
-    await axios.put(
-      `https://rms-6one.onrender.com/api/auth/user/${id}/deactivate`,
-      {},
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+    const confirmDelete = window.confirm("Are you sure you want to deactivate this user?");
+    if (!confirmDelete) return;
 
-    setUsers((prev) =>
-      prev.filter((user) => user._id !== id)
-    );
+    const token = localStorage.getItem("token");
+    try {
+      await axios.put(
+        `https://rms-6one.onrender.com/api/auth/user/${id}/deactivate`, 
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setUsers((prev) => prev.filter((user) => user._id !== id));
+    } catch (err) {
+      console.error("Deactivation failed:", err.message);
+    }
   };
 
   return (
     <div>
       <h2>User Management</h2>
 
+      {/* Export Buttons */}
       <div className="d-flex justify-content-between mb-3">
         <button className="btn btn-success me-2" onClick={exportToExcel}>
           Export to Excel
@@ -86,7 +114,8 @@ const AdminUsers = () => {
         </button>
       </div>
 
-      <table className="table table-bordered table-striped">
+      {/* Table */}
+      <table id="user-table" className="table table-bordered table-striped">
         <thead>
           <tr>
             <th>Name</th>
@@ -97,6 +126,14 @@ const AdminUsers = () => {
           </tr>
         </thead>
         <tbody>
+          {users.length === 0 && (
+            <tr>
+              <td colSpan="5" className="text-center text-muted">
+                No users found.
+              </td>
+            </tr>
+          )}
+
           {users.map((user) => (
             <tr key={user._id}>
               <td>{user.name}</td>
@@ -116,9 +153,7 @@ const AdminUsers = () => {
               <td>
                 <span
                   className={
-                    user.isActive
-                      ? "badge bg-success"
-                      : "badge bg-secondary"
+                    user.isActive ? "badge bg-success" : "badge bg-secondary"
                   }
                 >
                   {user.isActive ? "Active" : "Inactive"}
