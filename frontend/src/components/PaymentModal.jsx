@@ -8,12 +8,7 @@ const PaymentModal = ({ totalAmount, onConfirm, onClose }) => {
   const handlePaymentChange = (e) => {
     const value = e.target.value;
     setPayment(value);
-    setError("");
-
-    // Clear error if valid
-    if (!value || isNaN(parseFloat(value)) || parseFloat(value) < totalAmount) {
-      return;
-    }
+    setError(""); // Clear error when input changes
   };
 
   const handleConfirm = () => {
@@ -29,11 +24,10 @@ const PaymentModal = ({ totalAmount, onConfirm, onClose }) => {
       return;
     }
 
-    // ✅ Pass payment amount back with order data
-    onConfirm(paid); // Call confirm function with actual payment
+    onConfirm(paid); // Pass back payment amount
   };
 
-  const changeDue = payment ? (payment - totalAmount).toFixed(2) : null;
+  const changeDue = payment && payment >= totalAmount ? (payment - totalAmount).toFixed(2) : null;
 
   return (
     <div style={{
@@ -64,7 +58,7 @@ const PaymentModal = ({ totalAmount, onConfirm, onClose }) => {
         />
       </div>
 
-      {changeDue !== null && parseFloat(payment) >= totalAmount && (
+      {changeDue !== null && (
         <div className="mb-3 alert alert-success">
           <strong>Change Due:</strong> ${changeDue}
         </div>
@@ -74,7 +68,11 @@ const PaymentModal = ({ totalAmount, onConfirm, onClose }) => {
         <button className="btn btn-secondary" onClick={onClose}>
           Cancel
         </button>
-        <button className="btn btn-success" onClick={handleConfirm}>
+        <button
+          className="btn btn-success"
+          onClick={handleConfirm}
+          disabled={parseFloat(payment) < totalAmount} // Disable button if underpaid
+        >
           Confirm & Place Order
         </button>
       </div>

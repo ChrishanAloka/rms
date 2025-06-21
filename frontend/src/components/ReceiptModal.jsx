@@ -6,6 +6,11 @@ import html2canvas from "html2canvas";
 const exportToPDF = () => {
   const input = document.getElementById("receipt");
 
+  if (!input) {
+    alert("Receipt not found");
+    return;
+  }
+
   html2canvas(input).then((canvas) => {
     const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "mm", "a4");
@@ -20,7 +25,13 @@ const exportToPDF = () => {
 const ReceiptModal = ({ order, onClose }) => {
   if (!order) return null;
 
-  const { customerName, customerPhone, tableNo, items, totalPrice } = order;
+  const {
+    customerName,
+    customerPhone,
+    tableNo,
+    items,
+    totalPrice
+  } = order;
 
   return (
     <div style={{
@@ -34,7 +45,13 @@ const ReceiptModal = ({ order, onClose }) => {
       padding: "20px",
       fontFamily: "monospace"
     }}>
-      <button onClick={onClose} className="btn btn-secondary mb-3">Close</button>
+      <button
+        onClick={onClose}
+        className="btn btn-secondary mb-3"
+      >
+        Close
+      </button>
+
       <div id="receipt" style={{ maxWidth: "400px", margin: "auto" }}>
         <h3 className="text-center">RMS Restaurant</h3>
         <p><strong>Date:</strong> {new Date().toLocaleString()}</p>
@@ -65,8 +82,11 @@ const ReceiptModal = ({ order, onClose }) => {
           🖨️ Print Receipt
         </button>
 
-        <button className="btn btn-danger ms-2" onClick={exportToPDF}>
-        💾 Save as PDF
+        <button
+          className="btn btn-danger ms-2"
+          onClick={exportToPDF}
+        >
+          💾 Save as PDF
         </button>
       </div>
     </div>

@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import ReceiptModal from "./ReceiptModal";
 import PaymentModal from "./PaymentModal";
 
@@ -15,10 +14,10 @@ const CashierLanding = () => {
     orderType: "table",
     tableNo: ""
   });
-
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [orderData, setOrderData] = useState(null);
+  const [formSubmitted, setFormSubmitted] = useState(false); // Controls error visibility
 
   // Load menus on mount
   useEffect(() => {
@@ -28,7 +27,7 @@ const CashierLanding = () => {
   const fetchMenus = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("https://rms-6one.onrender.com/api/auth/menus", {
+      const res = await axios.get("http://localhost:5000/api/auth/menus", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMenus(res.data);
@@ -37,14 +36,14 @@ const CashierLanding = () => {
     }
   };
 
-  // Auto-fill customer name if phone exists
+  // Auto-fill customer name by phone
   useEffect(() => {
     if (!customer.phone) return;
 
     const timer = setTimeout(async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("https://rms-6one.onrender.com/api/auth/customer", {
+        const res = await axios.get("http://localhost:5000/api/auth/customer", {
           params: { phone: customer.phone },
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -60,16 +59,14 @@ const CashierLanding = () => {
     return () => clearTimeout(timer);
   }, [customer.phone]);
 
-  // Handle customer input
+  // Handle customer input change
   const handleCustomerChange = (e) =>
     setCustomer({ ...customer, [e.target.name]: e.target.value });
 
   // Add to cart
   const addToCart = (menu) => {
     if (!menu._id || menu.currentQty <= 0) return;
-
     const existingItem = cart.find((item) => item._id === menu._id);
-
     if (!existingItem) {
       setCart([...cart, { ...menu, quantity: 1 }]);
     } else {
@@ -86,7 +83,7 @@ const CashierLanding = () => {
     setCart(cart.filter((item) => item._id !== menuId));
   };
 
-  // Update quantity in cart
+  // Update quantity
   const updateQuantity = (menuId, delta) => {
     setCart(
       cart.map((item) =>
@@ -99,14 +96,22 @@ const CashierLanding = () => {
 
   // Step 1: Validate and go to payment
   const goToPayment = () => {
-    const { phone, name } = customer;
+    setFormSubmitted(true); // Show validation now
+
+    const { phone, name, orderType, tableNo } = customer;
+
     if (!phone.trim() || !name.trim()) {
-      alert("Customer Phone and Name are required.");
+      toast.error("Phone and Name are required.");
+      return;
+    }
+
+    if (orderType === "table" && !tableNo.trim()) {
+      toast.error("Table No is required for dine-in orders");
       return;
     }
 
     if (cart.length === 0) {
-      alert("Please select at least one item.");
+      toast.error("Please select at least one item");
       return;
     }
 
@@ -118,7 +123,7 @@ const CashierLanding = () => {
     setOrderData({
       customerName: name,
       customerPhone: phone,
-      tableNo: customer.orderType === "takeaway" ? "Takeaway" : customer.tableNo,
+      tableNo: orderType === "takeaway" ? "Takeaway" : tableNo,
       items: cart.map((item) => ({
         menuId: item._id,
         name: item.name,
@@ -132,7 +137,7 @@ const CashierLanding = () => {
     setShowPaymentModal(true);
   };
 
-  // Step 2: After payment, place order
+  // Step 2: Confirm order and send to backend
   const submitConfirmedOrder = async (paymentAmount) => {
     try {
       const token = localStorage.getItem("token");
@@ -144,7 +149,7 @@ const CashierLanding = () => {
         changeDue: (paymentAmount - orderData.totalPrice).toFixed(2)
       };
 
-      const res = await axios.post("https://rms-6one.onrender.com/api/auth/order", payload, {
+      const res = await axios.post("http://localhost:5000/api/auth/order", payload, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -160,9 +165,10 @@ const CashierLanding = () => {
       setCart([]);
       fetchMenus();
       setShowPaymentModal(false);
+      setFormSubmitted(false); // Reset form validation
       toast.success("Order placed successfully!");
     } catch (err) {
-      console.error("Failed to place order:", err.response?.data || err.message);
+      console.error("Order failed:", err.response?.data || err.message);
       alert("Failed to place order");
     }
   };
@@ -175,6 +181,7 @@ const CashierLanding = () => {
       <div className="mb-4 p-3 bg-light border rounded">
         <h5>Customer Details</h5>
         <div className="row g-3">
+          {/* Phone */}
           <div className="col-md-6">
             <label className="form-label">Customer Phone *</label>
             <input
@@ -184,13 +191,19 @@ const CashierLanding = () => {
               onChange={handleCustomerChange}
               placeholder="Phone"
               className={`form-control ${
-                !customer.phone ? "is-invalid" : ""
+                formSubmitted && !customer.phone.trim()
+                  ? "is-invalid"
+                  : ""
               }`}
             />
-            {!customer.phone && (
-              <div className="invalid-feedback">Enter valid phone number</div>
+            {formSubmitted && !customer.phone.trim() && (
+              <div className="invalid-feedback">
+                Please enter a valid phone number
+              </div>
             )}
           </div>
+
+          {/* Name */}
           <div className="col-md-6">
             <label className="form-label">Customer Name *</label>
             <input
@@ -200,11 +213,15 @@ const CashierLanding = () => {
               onChange={handleCustomerChange}
               placeholder="Name"
               className={`form-control ${
-                !customer.name ? "is-invalid" : ""
+                formSubmitted && !customer.name.trim()
+                  ? "is-invalid"
+                  : ""
               }`}
             />
-            {!customer.name && (
-              <div className="invalid-feedback">Enter customer name</div>
+            {formSubmitted && !customer.name.trim() && (
+              <div className="invalid-feedback">
+                Please enter customer name
+              </div>
             )}
           </div>
         </div>
@@ -231,12 +248,20 @@ const CashierLanding = () => {
                 onChange={handleCustomerChange}
                 placeholder="Table No"
                 className={`form-control ${
-                  customer.orderType === "table" && !customer.tableNo ? "is-invalid" : ""
+                  formSubmitted &&
+                  customer.orderType === "table" &&
+                  !customer.tableNo.trim()
+                    ? "is-invalid"
+                    : ""
                 }`}
               />
-              {customer.orderType === "table" && !customer.tableNo && (
-                <div className="invalid-feedback">Table No is required</div>
-              )}
+              {formSubmitted &&
+                customer.orderType === "table" &&
+                !customer.tableNo.trim() && (
+                  <div className="invalid-feedback">
+                    Table No is required for dine-in orders
+                  </div>
+                )}
             </>
           )}
         </div>
@@ -278,16 +303,13 @@ const CashierLanding = () => {
               </li>
             ))}
           </ul>
-
           <h5>Total: $
             {cart
               .reduce((sum, item) => sum + item.price * item.quantity, 0)
               .toFixed(2)}
           </h5>
-
           <button
             className="btn btn-success w-100 mt-2"
-            disabled={!customer.phone || !customer.name}
             onClick={goToPayment}
           >
             Proceed to Payment
@@ -298,21 +320,22 @@ const CashierLanding = () => {
       {/* Menu List */}
       <h4>Choose Menu Items</h4>
       <div className="row g-3 mb-4">
-        {menus.length === 0 && <p>No menu items available.</p>}
-
+        {menus.length === 0 && (
+          <p className="text-muted">No menu items available.</p>
+        )}
         {menus.map((menu) => {
           const inStock = menu.currentQty > 0;
+          const lowStock = menu.currentQty <= menu.minimumQty;
 
           return (
             <div key={menu._id} className="col-md-3 mb-3">
               <div className="card shadow-sm h-100 position-relative">
                 <img
-                  src={`https://rms-6one.onrender.com${menu.imageUrl}`}
+                  src={`http://localhost:5000${menu.imageUrl}`}
                   alt={menu.name}
                   style={{ height: "280px", objectFit: "cover" }}
                   className="card-img-top"
                 />
-
                 <div className="card-body d-flex flex-column">
                   <h5>{menu.name}</h5>
                   <p>
@@ -320,16 +343,13 @@ const CashierLanding = () => {
                     Stock:{" "}
                     <span
                       className={`badge ${
-                        menu.currentQty <= menu.minimumQty
-                          ? "bg-warning text-dark"
-                          : "bg-success"
+                        lowStock ? "bg-warning text-dark" : "bg-success"
                       }`}
                     >
                       {menu.currentQty}
                     </span>{" "}
                     left
                   </p>
-
                   {inStock && (
                     <button
                       className="btn btn-primary mt-auto"
@@ -338,7 +358,6 @@ const CashierLanding = () => {
                       Add to Order
                     </button>
                   )}
-
                   {!inStock && (
                     <div className="mt-auto pt-2 text-danger">
                       <strong>Out of Stock</strong>

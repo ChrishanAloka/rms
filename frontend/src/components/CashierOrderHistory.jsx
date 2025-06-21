@@ -10,21 +10,24 @@ const CashierOrderHistory = () => {
     status: ""
   });
 
-  // Load orders on mount
+  // Load orders on mount or filter change
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [filters]);
 
   const fetchOrders = async () => {
     const token = localStorage.getItem("token");
-    const params = new URLSearchParams(filters).toString();
+    const params = new URLSearchParams();
+
+    if (filters.startDate) params.append("startDate", filters.startDate);
+    if (filters.endDate) params.append("endDate", filters.endDate);
+    if (filters.status) params.append("status", filters.status);
 
     try {
-      const res = await axios.get(`https://rms-6one.onrender.com/api/auth/orders?${params}`, {
+      const res = await axios.get(`https://rms-6one.onrender.com/api/auth/orders?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      console.log("Orders received:", res.data); // 👈 Just to confirm
       setOrders(res.data);
     } catch (err) {
       console.error("Failed to load orders:", err.response?.data || err.message);
@@ -49,40 +52,34 @@ const CashierOrderHistory = () => {
     });
   };
 
-const exportToPDF = () => {
-  import("jspdf").then((jsPDF) => {
-    import("html2canvas").then((html2canvas) => {
-      const input = document.getElementById("order-table");
-
-      if (!input) {
-        alert("Could not find order table");
-        return;
-      }
-
-      setTimeout(() => {
+  const exportToPDF = () => {
+    import("jspdf").then((jsPDF) => {
+      import("html2canvas").then((html2canvas) => {
         const input = document.getElementById("order-table");
+
         if (!input) {
-          alert("Table not ready yet");
+          alert("Could not find order table");
           return;
         }
 
-        html2canvas.default(input).then((canvas) => {
-          const imgData = canvas.toDataURL("image/png");
-          const pdf = new jsPDF.default("p", "pt", "a4");
-          const width = pdf.internal.pageSize.getWidth();
-          const height = (canvas.height * width) / canvas.width;
+        setTimeout(() => {
+          html2canvas.default(input).then((canvas) => {
+            const imgData = canvas.toDataURL("image/png");
+            const pdf = new jsPDF.default("p", "pt", "a4");
+            const width = pdf.internal.pageSize.getWidth();
+            const height = (canvas.height * width) / canvas.width;
 
-          pdf.addImage(imgData, "PNG", 0, 0, width, height);
-          pdf.save("cashier_orders.pdf");
-        });
-
-      }, 500); // Small delay to ensure DOM updates
-    }).catch(err => console.error("Failed to load html2canvas:", err));
-  }).catch(err => console.error("Failed to load jspdf:", err));
-};
+            pdf.addImage(imgData, "PNG", 0, 0, width, height);
+            pdf.save("cashier_orders.pdf");
+          });
+        }, 500);
+      }).catch((err) => console.error("Failed to load html2canvas:", err));
+    }).catch((err) => console.error("Failed to load jspdf:", err));
+  };
 
   const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -90,45 +87,45 @@ const exportToPDF = () => {
       <h2>Order History</h2>
 
       {/* Filters */}
-      <div className="mb-4 d-flex gap-2 flex-wrap align-items-center">
-        <input
-          name="startDate"
-          type="date"
-          className="form-control"
-          style={{ maxWidth: "160px" }}
-          onChange={handleFilterChange}
-        />
-        <input
-          name="endDate"
-          type="date"
-          className="form-control"
-          style={{ maxWidth: "160px" }}
-          onChange={handleFilterChange}
-        />
-        <select
-          name="status"
-          className="form-select"
-          style={{ maxWidth: "200px" }}
-          onChange={handleFilterChange}
-        >
-          <option value="">All Status</option>
-          <option value="Pending">Pending</option>
-          <option value="Processing">Processing</option>
-          <option value="Ready">Ready</option>
-          <option value="Completed">Completed</option>
-        </select>
-        <button
-          className="btn btn-primary"
-          onClick={fetchOrders}
-        >
-          Filter
+      <div className="mb-4 d-flex flex-wrap gap-2 align-items-center">
+        <div>
+          <input
+            name="startDate"
+            type="date"
+            className="form-control"
+            onChange={handleFilterChange}
+          />
+        </div>
+        <div>
+          <input
+            name="endDate"
+            type="date"
+            className="form-control"
+            onChange={handleFilterChange}
+          />
+        </div>
+        <div>
+          <select
+            name="status"
+            className="form-select"
+            onChange={handleFilterChange}
+          >
+            <option value="">All Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Processing">Processing</option>
+            <option value="Ready">Ready</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+        <button className="btn btn-primary" onClick={fetchOrders}>
+          Apply Filters
         </button>
-        <button className="btn btn-success me-2" onClick={exportToExcel}>
-  Export to Excel
-</button>
-<button className="btn btn-danger" onClick={exportToPDF}>
-  Export to PDF
-</button>
+        <button className="btn btn-success" onClick={exportToExcel}>
+          Export to Excel
+        </button>
+        <button className="btn btn-danger" onClick={exportToPDF}>
+          Export to PDF
+        </button>
       </div>
 
       {/* Order List */}
@@ -169,9 +166,9 @@ const exportToPDF = () => {
                     </span>
                   </td>
                   <td>
-                    <ul className="list-group list-group-flush">
-                      {order.items.map((item, index) => (
-                        <li key={index} className="list-group-item p-0">
+                    <ul className="list-group list-group-flush small">
+                      {order.items.map((item, idx) => (
+                        <li key={idx} className="list-group-item p-0">
                           {item.name} x{item.quantity}
                         </li>
                       ))}
