@@ -65,17 +65,24 @@ exports.createOrder = async (req, res) => {
 
 // Get order history for cashier
 exports.getOrderHistory = async (req, res) => {
-  const { startDate, endDate } = req.query;
+  const { startDate, endDate, status } = req.query;
   const query = {};
 
+  // Handle date range
   if (startDate && endDate) {
     query.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+  }
+
+  // ✅ Handle status filter
+  if (status) {
+    query.status = status;
   }
 
   try {
     const orders = await Order.find(query).sort({ date: -1 });
     res.json(orders);
   } catch (err) {
+    console.error("Failed to load orders:", err.message);
     res.status(500).json({ error: "Failed to load orders" });
   }
 };
