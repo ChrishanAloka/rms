@@ -79,6 +79,9 @@ const KitchenBills = () => {
     }
   };
 
+    // Get currency from localStorage (not from React context)
+  const symbol = localStorage.getItem("currencySymbol") || "$";
+
   // Open edit modal
   const openEditModal = (bill) => {
     setEditingBill(bill._id);
@@ -143,6 +146,7 @@ const KitchenBills = () => {
     }
   };
 
+
   return (
     <div>
       <h2>All Bills</h2>
@@ -167,7 +171,7 @@ const KitchenBills = () => {
             </select>
           </div>
           <div className="col-md-6">
-            <label className="form-label">Amount ($)</label>
+            <label className="form-label">Amount ({symbol})</label>
             <input
               type="number"
               name="amount"
@@ -236,7 +240,7 @@ const KitchenBills = () => {
                     </select>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Amount ($)</label>
+                    <label className="form-label">Amount ({symbol})</label>
                     <input
                       type="number"
                       name="amount"
@@ -313,7 +317,7 @@ const KitchenBills = () => {
               <tr key={bill._id}>
                 <td>{new Date(bill.date).toLocaleDateString()}</td>
                 <td>{bill.type}</td>
-                <td>${bill.amount.toFixed(2)}</td>
+                <td>{symbol}{bill.amount.toFixed(2)}</td>
                 <td>{bill.description}</td>
                 <td>
                   <button
@@ -342,7 +346,7 @@ const KitchenBills = () => {
           <li className="list-group-item d-flex justify-content-between align-items-center">
             <span>Total Expenses</span>
             <strong>
-              $
+              {symbol}
               {bills.reduce((sum, b) => sum + b.amount, 0).toFixed(2)}
             </strong>
           </li>

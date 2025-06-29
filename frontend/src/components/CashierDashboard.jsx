@@ -1,9 +1,13 @@
 // src/components/CashierDashboard.jsx
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+
 
 const CashierDashboard = () => {
   const [orders, setOrders] = useState([]);
+
+      // Get currency from localStorage (not from React context)
+  const symbol = localStorage.getItem("currencySymbol") || "$";
 
   // Load today's orders
   useEffect(() => {
@@ -32,9 +36,8 @@ const CashierDashboard = () => {
 
   return (
     <div>
-      <h2>Cashier Dashboard</h2>
+      <h2>Today's Orders</h2>
 
-      <h4>Today's Orders</h4>
       {orders.length === 0 ? (
         <p className="text-muted">No orders today</p>
       ) : (
@@ -45,7 +48,7 @@ const CashierDashboard = () => {
               <br />
               Customer: {order.customerName}
               <br />
-              Total: ${order.totalPrice?.toFixed(2)}
+              Total: {symbol}{order.totalPrice?.toFixed(2)}
               <br />
               Status:{" "}
               <span

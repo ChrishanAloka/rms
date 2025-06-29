@@ -1,4 +1,3 @@
-// src/components/ReceiptModal.jsx
 import React from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -45,12 +44,7 @@ const ReceiptModal = ({ order, onClose }) => {
       padding: "20px",
       fontFamily: "monospace"
     }}>
-      <button
-        onClick={onClose}
-        className="btn btn-secondary mb-3"
-      >
-        Close
-      </button>
+      <button onClick={onClose} className="btn btn-secondary mb-3">Close</button>
 
       <div id="receipt" style={{ maxWidth: "400px", margin: "auto" }}>
         <h3 className="text-center">RMS Restaurant</h3>
@@ -80,13 +74,6 @@ const ReceiptModal = ({ order, onClose }) => {
           className="btn btn-success"
         >
           🖨️ Print Receipt
-        </button>
-
-        <button
-          className="btn btn-danger ms-2"
-          onClick={exportToPDF}
-        >
-          💾 Save as PDF
         </button>
       </div>
     </div>

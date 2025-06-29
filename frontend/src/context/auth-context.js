@@ -1,5 +1,4 @@
-// src/context/auth-context.js
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useContext  } from "react";
 import axios from "axios";
 
 export const AuthContext = createContext();
@@ -7,6 +6,26 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currencySymbol, setCurrencySymbol] = useState("$");
+  const [currencyCode, setCurrencyCode] = useState("USD");
+  const [tokenExpiry, setTokenExpiry] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split(".")[1]));
+        setUser(decoded);
+        setTokenExpiry(decoded.exp * 1000); // Store expiry timestamp
+      } catch (err) {
+        localStorage.removeItem("token");
+        setUser(null);
+      }
+    }
+
+    setLoading(false);
+  }, []);
 
   // Load user from token on mount
   useEffect(() => {
@@ -28,7 +47,65 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (data) => {
+  // Load currency settings
+  useEffect(() => {
+    const savedSymbol = localStorage.getItem("currencySymbol");
+    const savedCode = localStorage.getItem("currencyCode");
+
+    if (savedSymbol && savedCode) {
+      setCurrencySymbol(savedSymbol);
+      setCurrencyCode(savedCode);
+      return;
+    }
+
+    const fetchCurrency = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get("https://rms-6one.onrender.com/api/auth/settings/currency", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        setCurrencySymbol(res.data.symbol || "$");
+        setCurrencyCode(res.data.currency || "USD");
+
+        // Save to localStorage
+        localStorage.setItem("currencySymbol", res.data.symbol || "$");
+        localStorage.setItem("currencyCode", res.data.currency || "USD");
+      } catch (err) {
+        console.warn("Failed to load currency:", err.message);
+        setCurrencySymbol("$");
+        setCurrencyCode("USD");
+        localStorage.setItem("currencySymbol", "$");
+        localStorage.setItem("currencyCode", "USD");
+      }
+    };
+
+    fetchCurrency();
+  }, []);
+
+  const updateCurrency = async (symbol, code) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(
+        "https://rms-6one.onrender.com/api/auth/settings/currency",
+        { symbol, currency: code },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setCurrencySymbol(symbol);
+      setCurrencyCode(code);
+
+      // Save updated values to localStorage
+      localStorage.setItem("currencySymbol", symbol);
+      localStorage.setItem("currencyCode", code);
+    } catch (err) {
+      alert("Failed to update currency");
+    }
+  };
+
+  const login = (data) => {
     localStorage.setItem("token", data.token);
     const decoded = JSON.parse(atob(data.token.split(".")[1]));
     setUser(decoded);
@@ -40,7 +117,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        loading,
+        currencySymbol,
+        currencyCode,
+        updateCurrency
+      }}
+    >
       {!loading && children}
     </AuthContext.Provider>
   );

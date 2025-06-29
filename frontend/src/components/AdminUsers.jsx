@@ -4,6 +4,8 @@ import axios from "axios";
 import * as XLSX from "xlsx";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -81,28 +83,57 @@ const AdminUsers = () => {
 
   // Deactivate user
   const handleDeactivate = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to deactivate this user?");
-    if (!confirmDelete) return;
+  const confirmDelete = window.confirm("Are you sure you want to deactivate this user?");
+  if (!confirmDelete) return;
 
+  try {
     const token = localStorage.getItem("token");
-    try {
-      await axios.put(
-        `https://rms-6one.onrender.com/api/auth/user/${id}/deactivate`, 
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+    const res = await axios.put(
+      `https://rms-6one.onrender.com/api/auth/user/${id}/deactivate`,
+      {},
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
 
-      setUsers((prev) => prev.filter((user) => user._id !== id));
-    } catch (err) {
-      console.error("Deactivation failed:", err.message);
-    }
-  };
+    // ✅ Update user status locally instead of removing
+    setUsers(users.map(u => 
+      u._id === id ? res.data : u
+    ));
+
+    toast.success("User deactivated successfully!");
+
+  } catch (err) {
+    console.error("Deactivation failed:", err.message);
+    toast.error("Failed to deactivate user");
+  }
+};
+
+  const handleReactivate = async (id) => {
+  if (!window.confirm("Are you sure you want to reactivate this user?")) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    const res = await axios.put(`https://rms-6one.onrender.com/api/auth/user/reactivate/${id}`, {}, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    // ✅ Update users list with new data from server
+    setUsers(users.map(u => 
+      u._id === id ? res.data : u
+    ));
+
+    toast.success("User reactivated successfully!");
+  } catch (err) {
+    console.error("Reactivate failed:", err.response?.data || err.message);
+    toast.error("Failed to reactivate user");
+  }
+};
 
   return (
     <div>
       <h2>User Management</h2>
+      <ToastContainer />
 
       {/* Export Buttons */}
       <div className="d-flex justify-content-between mb-3">
@@ -163,7 +194,7 @@ const AdminUsers = () => {
                 {!user.isActive ? (
                   <button
                     className="btn btn-sm btn-success"
-                    onClick={() => alert("Reactivate feature coming soon")}
+                    onClick={() => handleReactivate(user._id)}
                   >
                     Reactivate
                   </button>

@@ -6,7 +6,7 @@ import ReceiptModal from "./ReceiptModal";
 import PaymentModal from "./PaymentModal";
 
 const CashierLanding = () => {
-  const [menus, setMenus] = useState([]);
+  const [menus, setMenus] = useState([]); // ✅ Initialize menus first
   const [cart, setCart] = useState([]);
   const [customer, setCustomer] = useState({
     phone: "",
@@ -17,7 +17,11 @@ const CashierLanding = () => {
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [orderData, setOrderData] = useState(null);
-  const [formSubmitted, setFormSubmitted] = useState(false); // Controls error visibility
+
+  // Search & Filter States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [formSubmitted, setFormSubmitted] = useState(false);
 
   // Load menus on mount
   useEffect(() => {
@@ -27,7 +31,7 @@ const CashierLanding = () => {
   const fetchMenus = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/auth/menus", {
+      const res = await axios.get("https://rms-6one.onrender.com/api/auth/menus", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setMenus(res.data);
@@ -36,14 +40,15 @@ const CashierLanding = () => {
     }
   };
 
-  // Auto-fill customer name by phone
+  // Auto-fill customer name if phone exists
   useEffect(() => {
     if (!customer.phone) return;
 
     const timer = setTimeout(async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get("http://localhost:5000/api/auth/customer", {
+
+        const res = await axios.get("https://rms-6one.onrender.com/api/auth/customer", {
           params: { phone: customer.phone },
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -83,7 +88,7 @@ const CashierLanding = () => {
     setCart(cart.filter((item) => item._id !== menuId));
   };
 
-  // Update quantity
+  // Update quantity in cart
   const updateQuantity = (menuId, delta) => {
     setCart(
       cart.map((item) =>
@@ -96,34 +101,26 @@ const CashierLanding = () => {
 
   // Step 1: Validate and go to payment
   const goToPayment = () => {
-    setFormSubmitted(true); // Show validation now
-
-    const { phone, name, orderType, tableNo } = customer;
+    const { phone, name } = customer;
+    const total = cart.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
 
     if (!phone.trim() || !name.trim()) {
       toast.error("Phone and Name are required.");
       return;
     }
 
-    if (orderType === "table" && !tableNo.trim()) {
-      toast.error("Table No is required for dine-in orders");
-      return;
-    }
-
     if (cart.length === 0) {
-      toast.error("Please select at least one item");
+      toast.error("Please select at least one item.");
       return;
     }
-
-    const total = cart.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
 
     setOrderData({
       customerName: name,
       customerPhone: phone,
-      tableNo: orderType === "takeaway" ? "Takeaway" : tableNo,
+      tableNo: customer.orderType === "takeaway" ? "Takeaway" : customer.tableNo,
       items: cart.map((item) => ({
         menuId: item._id,
         name: item.name,
@@ -137,6 +134,29 @@ const CashierLanding = () => {
     setShowPaymentModal(true);
   };
 
+  const placeOrder = () => {
+  setFormSubmitted(true); // Mark form as submitted
+
+  const { phone, name } = customer;
+
+  if (!phone.trim() || !name.trim()) {
+    toast.error("Phone and Name are required");
+    return;
+  }
+
+  if (customer.orderType === "table" && !customer.tableNo.trim()) {
+    toast.error("Table No is required for dine-in orders");
+    return;
+  }
+
+  if (cart.length === 0) {
+    toast.error("Please select at least one item");
+    return;
+  }
+
+  setShowPaymentModal(true);
+};
+
   // Step 2: Confirm order and send to backend
   const submitConfirmedOrder = async (paymentAmount) => {
     try {
@@ -149,7 +169,7 @@ const CashierLanding = () => {
         changeDue: (paymentAmount - orderData.totalPrice).toFixed(2)
       };
 
-      const res = await axios.post("http://localhost:5000/api/auth/order", payload, {
+      const res = await axios.post("https://rms-6one.onrender.com/api/auth/order", payload, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -165,13 +185,25 @@ const CashierLanding = () => {
       setCart([]);
       fetchMenus();
       setShowPaymentModal(false);
-      setFormSubmitted(false); // Reset form validation
       toast.success("Order placed successfully!");
     } catch (err) {
       console.error("Order failed:", err.response?.data || err.message);
       alert("Failed to place order");
     }
   };
+
+  // 🔍 Search & Filter Menus
+  const [filteredMenus, setFilteredMenus] = useState([]);
+
+  useEffect(() => {
+    const results = menus.filter((menu) => {
+      const matchesSearch = menu.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory =
+        !selectedCategory || menu.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+    setFilteredMenus(results);
+  }, [searchTerm, selectedCategory, menus]);
 
   return (
     <div>
@@ -189,17 +221,10 @@ const CashierLanding = () => {
               name="phone"
               value={customer.phone}
               onChange={handleCustomerChange}
-              placeholder="Phone"
-              className={`form-control ${
-                formSubmitted && !customer.phone.trim()
-                  ? "is-invalid"
-                  : ""
-              }`}
+              className={`form-control ${formSubmitted && !customer.phone ? "is-invalid" : ""}`}
             />
-            {formSubmitted && !customer.phone.trim() && (
-              <div className="invalid-feedback">
-                Please enter a valid phone number
-              </div>
+            {formSubmitted && !customer.phone && (
+              <div className="invalid-feedback">Enter valid phone number</div>
             )}
           </div>
 
@@ -211,17 +236,10 @@ const CashierLanding = () => {
               name="name"
               value={customer.name}
               onChange={handleCustomerChange}
-              placeholder="Name"
-              className={`form-control ${
-                formSubmitted && !customer.name.trim()
-                  ? "is-invalid"
-                  : ""
-              }`}
+              className={`form-control ${formSubmitted && !customer.name ? "is-invalid" : ""}`}
             />
-            {formSubmitted && !customer.name.trim() && (
-              <div className="invalid-feedback">
-                Please enter customer name
-              </div>
+            {formSubmitted && !customer.name && (
+              <div className="invalid-feedback">Enter customer name</div>
             )}
           </div>
         </div>
@@ -242,22 +260,21 @@ const CashierLanding = () => {
           {customer.orderType === "table" && (
             <>
               <label className="form-label mt-2">Table No *</label>
-              <input
+               <input
                 name="tableNo"
                 value={customer.tableNo}
                 onChange={handleCustomerChange}
-                placeholder="Table No"
                 className={`form-control ${
                   formSubmitted &&
                   customer.orderType === "table" &&
-                  !customer.tableNo.trim()
+                  !customer.tableNo
                     ? "is-invalid"
                     : ""
                 }`}
               />
               {formSubmitted &&
                 customer.orderType === "table" &&
-                !customer.tableNo.trim() && (
+                !customer.tableNo && (
                   <div className="invalid-feedback">
                     Table No is required for dine-in orders
                   </div>
@@ -319,11 +336,36 @@ const CashierLanding = () => {
 
       {/* Menu List */}
       <h4>Choose Menu Items</h4>
+      {/* Search & Category Filter */}
+      <div className="mb-4 d-flex gap-3 flex-wrap align-items-center">
+        <div style={{ width: "300px" }}>
+          <label className="form-label">Search by Name</label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="e.g., Burger"
+            className="form-control"
+          />
+        </div>
+        <div style={{ width: "200px" }}>
+          <label className="form-label">Filter by Category</label>
+          <select
+            className="form-select"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="">All Categories</option>
+            <option value="Main Course">Main Course</option>
+            <option value="Appetizer">Appetizer</option>
+            <option value="Dessert">Dessert</option>
+            <option value="Drink">Drink</option>
+          </select>
+        </div>
+      </div>
       <div className="row g-3 mb-4">
-        {menus.length === 0 && (
-          <p className="text-muted">No menu items available.</p>
-        )}
-        {menus.map((menu) => {
+        {filteredMenus.length === 0 && <p>No menu items found.</p>}
+        {filteredMenus.map((menu) => {
           const inStock = menu.currentQty > 0;
           const lowStock = menu.currentQty <= menu.minimumQty;
 
@@ -331,7 +373,7 @@ const CashierLanding = () => {
             <div key={menu._id} className="col-md-3 mb-3">
               <div className="card shadow-sm h-100 position-relative">
                 <img
-                  src={`http://localhost:5000${menu.imageUrl}`}
+                  src={`https://rms-6one.onrender.com${menu.imageUrl}`}
                   alt={menu.name}
                   style={{ height: "280px", objectFit: "cover" }}
                   className="card-img-top"
@@ -343,7 +385,9 @@ const CashierLanding = () => {
                     Stock:{" "}
                     <span
                       className={`badge ${
-                        lowStock ? "bg-warning text-dark" : "bg-success"
+                        lowStock
+                          ? "bg-warning text-dark"
+                          : "bg-success"
                       }`}
                     >
                       {menu.currentQty}

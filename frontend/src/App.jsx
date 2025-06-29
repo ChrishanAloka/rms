@@ -40,6 +40,24 @@ import Unauthorized from "./components/Unauthorized";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 
+import CurrencySettings from "./components/CurrencySettings";
+
+import AdminEmployees from "./components/AdminEmployees";
+import AdminEmployeeRegister from "./components/AdminEmployeeRegister";
+import AdminEmployeeEdit from "./components/AdminEmployeeEdit";
+
+import AttendanceDashboard from "./components/AttendanceDashboard";
+import AddAttendance from "./components/AddAttendance";
+
+import ReceiptView from "./components/ReceiptView";
+
+import SupplierRegistration from "./components/SupplierRegistration";
+import ExpensePage from "./components/ExpensePage";
+import SalaryPage from "./components/SalaryPage";
+
+import AdminKitchenRequests from "./components/AdminKitchenRequests";
+import KitchenRequestForm from "./components/KitchenRequestForm";
+
 
 <Route path="/unauthorized" element={<Unauthorized />} />
 
@@ -69,6 +87,18 @@ function App() {
         <Route index path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/signup-key" element={<AdminSignupKey />} />
+        <Route path="/admin/employees" element={<AdminEmployees />} />
+        <Route path="/admin/employee/new" element={<AdminEmployeeRegister />} />
+        <Route path="/admin/employee/edit/:id" element={<AdminEmployeeEdit />} />
+
+        <Route path="/admin/attendance" element={<AttendanceDashboard />} />
+        <Route path="/admin/attendance/add" element={<AddAttendance />} />
+        <Route path="/admin/suppliers" element={<SupplierRegistration />} />
+        <Route path="/admin/expenses" element={<ExpensePage />} />
+        <Route path="/admin/salaries" element={<SalaryPage />} />
+
+        <Route path="/admin/currency" element={<CurrencySettings />} />
+        <Route path="/admin/kitchen-requests" element={<AdminKitchenRequests />} />
       </Route>
       
       <Route
@@ -80,6 +110,7 @@ function App() {
       >
         <Route path="/kitchen" element={<KitchenLanding />} />
         <Route path="/kitchen/history" element={<KitchenOrderHistory />} />
+         <Route path="/kitchen/kitchen-requestsForm" element={<KitchenRequestForm />} />
       </Route>
 
       <Route
@@ -112,7 +143,7 @@ function App() {
         <Route path="/:role/report" element={<MonthlyReport />} />
         <Route path="/:role/bills" element={<KitchenBills />} />  {/* ✅ New route */}
       </Route>
-
+      <Route path="/orders/receipt/:id" element={<ReceiptView />} />
       <Route
         element={
           <ProtectedRoute allowedRoles={["cashier"]}>
@@ -120,6 +151,7 @@ function App() {
           </ProtectedRoute>
         }
       >
+        
         <Route path="/cashier/orders" element={<CashierOrderHistory />} />
         <Route path="/cashier/today" element={<CashierDashboard />} />
       </Route>

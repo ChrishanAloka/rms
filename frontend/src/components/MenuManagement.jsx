@@ -1,4 +1,3 @@
-// src/components/MenuManagement.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
@@ -18,58 +17,54 @@ const MenuManagement = () => {
   const [editImage, setEditImage] = useState(null);
   const [preview, setPreview] = useState("");
   const [editPreview, setEditPreview] = useState("");
+  const [restockModalOpen, setRestockModalOpen] = useState(false);
+  const [restockMenu, setRestockMenu] = useState(null);
+  const [restockAmount, setRestockAmount] = useState(0);
 
   // Load menus on mount
   useEffect(() => {
-    const fetchMenus = async () => {
-      const token = localStorage.getItem("token");
-      const res = await axios.get("https://rms-6one.onrender.com/api/auth/menus", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setMenus(res.data);
-    };
     fetchMenus();
   }, []);
 
-  // Handle create input
+  const fetchMenus = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("https://rms-6one.onrender.com/api/auth/menus", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMenus(res.data);
+    } catch (err) {
+      console.error("Failed to load menus:", err.message);
+    }
+  };
+
+  // Handle create input change
   const handleChange = (e) =>
     setNewMenu({ ...newMenu, [e.target.name]: e.target.value });
 
   // Calculate net profit
-  const calculateNetProfit = () => {
-    const price = parseFloat(newMenu.price) || 0;
-    const cost = parseFloat(newMenu.cost) || 0;
-    return (price - cost).toFixed(2);
+  const calculateNetProfit = (price, cost) => {
+    return (parseFloat(price || 0) - parseFloat(cost || 0)).toFixed(2);
   };
 
   // Add new menu
   const handleCreate = async (e) => {
     e.preventDefault();
-
     const formData = new FormData();
     Object.entries(newMenu).forEach(([key, value]) =>
       formData.append(key, value)
     );
-
-    // ✅ Auto-set currentQty = minimumQty
-    formData.append("currentQty", newMenu.minimumQty);
-
-    if (image) {
-      formData.append("image", image);
-    }
+    formData.append("currentQty", newMenu.minimumQty); // Auto-set currentQty
+    if (image) formData.append("image", image);
 
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(
-        "https://rms-6one.onrender.com/api/auth/menu",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${token}`
-          }
+      const res = await axios.post("https://rms-6one.onrender.com/api/auth/menu", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`
         }
-      );
+      });
       setMenus([...menus, res.data]);
       resetForm();
     } catch (err) {
@@ -92,43 +87,37 @@ const MenuManagement = () => {
 
   // Open edit modal
   const openEditModal = (menu) => {
-    setEditingMenu(menu._id); // ✅ Use _id
+    setEditingMenu(menu._id);
     setEditData({
       name: menu.name,
       description: menu.description || "",
       price: menu.price,
       cost: menu.cost,
       category: menu.category,
-      minimumQty: menu.minimumQty,
-      currentQty: menu.minimumQty
+      minimumQty: menu.minimumQty
     });
     setEditImage(null);
-    setEditPreview(""); // Reset preview
+    setEditPreview("");
   };
 
   const handleEditChange = (e) =>
     setEditData({ ...editData, [e.target.name]: e.target.value });
 
-  // ✅ Fix: Update existing menu, don't create new one
+  // Submit edit
   const handleUpdate = async (e) => {
     e.preventDefault();
-
-    const { id } = editingMenu;
-
     const formData = new FormData();
     Object.entries(editData).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         formData.append(key, value);
       }
     });
-
     if (editImage) {
       formData.append("image", editImage);
     }
 
     try {
       const token = localStorage.getItem("token");
-
       const res = await axios.put(
         `https://rms-6one.onrender.com/api/auth/menu/${editingMenu}`,
         formData,
@@ -140,9 +129,8 @@ const MenuManagement = () => {
         }
       );
 
-      // ✅ Replace old data in list
       setMenus(menus.map((m) => (m._id === editingMenu ? res.data : m)));
-      alert("Menu updated successfully!");
+      toast.success("Menu updated successfully!");
       setEditingMenu(null);
     } catch (err) {
       console.error("Update failed:", err.response?.data || err.message);
@@ -158,11 +146,61 @@ const MenuManagement = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.delete(`https://rms-6one.onrender.com/api/auth/menu/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }
       });
+
       setMenus(menus.filter((menu) => menu._id !== id));
+      toast.success("Menu deleted");
     } catch (err) {
       alert("Failed to delete menu");
+    }
+  };
+
+  // Restock functions
+  const openRestockModal = (menu) => {
+    setRestockMenu(menu);
+    setRestockAmount(0);
+    setRestockModalOpen(true);
+  };
+
+  const closeRestockModal = () => {
+    setRestockModalOpen(false);
+    setRestockMenu(null);
+    setRestockAmount(0);
+  };
+
+  const handleRestockSubmit = async () => {
+    if (restockAmount <= 0) {
+      alert("Please enter a valid restock amount");
+      return;
+    }
+
+    const updatedAvailableQty = restockMenu.availableQty + parseInt(restockAmount);
+    const updatedCurrentQty = restockMenu.currentQty + parseInt(restockAmount);
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.put(
+        `https://rms-6one.onrender.com/api/auth/menu/${restockMenu._id}`,
+        {
+          availableQty: updatedAvailableQty,
+          currentQty: updatedCurrentQty
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      setMenus(
+        menus.map((m) => (m._id === restockMenu._id ? res.data : m))
+      );
+      toast.success("Menu restocked successfully!");
+      closeRestockModal();
+    } catch (err) {
+      alert("Failed to restock");
     }
   };
 
@@ -305,7 +343,7 @@ const MenuManagement = () => {
             <label className="form-label">Net Profit</label>
             <input
               type="text"
-              value={`$${calculateNetProfit()}`}
+              value={`$${calculateNetProfit(newMenu.price, newMenu.cost)}`}
               readOnly
               className="form-control bg-light text-success"
             />
@@ -317,6 +355,110 @@ const MenuManagement = () => {
           </div>
         </div>
       </form>
+
+      {/* Restock Modal */}
+      {restockModalOpen && restockMenu && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Restock "{restockMenu.name}"</h5>
+                <button
+                  className="btn-close"
+                  onClick={closeRestockModal}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Enter Quantity to Add</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={restockAmount}
+                    onChange={(e) => setRestockAmount(parseInt(e.target.value))}
+                    className="form-control"
+                    placeholder="e.g., 10"
+                  />
+                </div>
+                <div className="mb-3">
+                  <strong>Current Available:</strong> {restockMenu.availableQty} <br />
+                  <strong>Current Stock:</strong> {restockMenu.currentQty}
+                </div>
+                <div className="mt-4 d-flex justify-content-between">
+                  <button
+                    className="btn btn-secondary"
+                    onClick={closeRestockModal}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-success"
+                    onClick={handleRestockSubmit}
+                  >
+                    Add Stock
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Menu List */}
+      <div className="row g-3">
+        {menus.length === 0 && (
+          <p className="text-muted">No menu items found</p>
+        )}
+        {menus.map((menu) => {
+          const inStock = menu.currentQty > 0;
+          const lowStock = menu.currentQty <= menu.minimumQty;
+
+          return (
+            <div key={menu._id} className="col-md-3 mb-3">
+              <div className="card shadow-sm h-100 position-relative">
+                <img
+                  src={`https://rms-6one.onrender.com${menu.imageUrl}`}
+                  alt={menu.name}
+                  className="card-img-top"
+                  style={{ height: "280px", objectFit: "fill" }}
+                />
+                <div className="card-body d-flex flex-column">
+                  <h5>{menu.name}</h5>
+                  <p className="card-text">
+                    Price: ${menu.price.toFixed(2)}<br />
+                    Cost: ${menu.cost?.toFixed(2) || "0.00"}<br />
+                    Ava: {menu.currentQty || 0} / Min: {menu.minimumQty || 5}
+                    <br />
+                    <span className={`badge ${getStatusLabelClass(menu.menuStatus)}`}>
+                      {menu.menuStatus || "In Stock"}
+                    </span>
+                  </p>
+                  <div className="d-flex gap-2 mt-auto">
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => openEditModal(menu)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => handleDelete(menu._id)}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      className="btn btn-success btn-sm"
+                      onClick={() => openRestockModal(menu)}
+                    >
+                      Restock
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {/* Edit Modal */}
       {editingMenu && (
@@ -341,7 +483,7 @@ const MenuManagement = () => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Price ($)</label>
+                    <label className="form-label">Price</label>
                     <input
                       type="number"
                       name="price"
@@ -353,7 +495,7 @@ const MenuManagement = () => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Cost ($)</label>
+                    <label className="form-label">Cost</label>
                     <input
                       type="number"
                       name="cost"
@@ -365,7 +507,7 @@ const MenuManagement = () => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Available Quantity</label>
+                    <label className="form-label">Minimum Quantity</label>
                     <input
                       type="number"
                       name="minimumQty"
@@ -421,11 +563,17 @@ const MenuManagement = () => {
                     />
                   </div>
                   <img
-                    src={editPreview || `https://rms-6one.onrender.com${editData.imageUrl}`}
+                    src={
+                      editPreview ||
+                      `https://rms-6one.onrender.com${editData.imageUrl}`
+                    }
                     alt="Preview"
-                    style={{ width: "100%", maxHeight: "200px", objectFit: "cover" }}
+                    style={{
+                      width: "100%",
+                      maxHeight: "200px",
+                      objectFit: "cover"
+                    }}
                   />
-
                   <div className="mt-3">
                     <button type="submit" className="btn btn-primary w-100">
                       Save Changes
@@ -437,52 +585,6 @@ const MenuManagement = () => {
           </div>
         </div>
       )}
-
-      {/* Menu List */}
-      <div className="row g-3">
-        {menus.map((menu) => (
-          <div key={menu._id} className="col-md-3 mb-3">
-            <div className="card shadow-sm h-100 position-relative">
-              <img
-                src={`https://rms-6one.onrender.com${menu.imageUrl}`}
-                alt={menu.name}
-                className="card-img-top"
-                style={{ height: "280px", objectFit: "fill" }}
-              />
-
-              <div className="card-body d-flex flex-column">
-                <h5>{menu.name}</h5>
-                <p className="card-text">
-                  Price: ${menu.price?.toFixed(2) || "0.00"}
-                  <br />
-                  Cost: ${menu.cost?.toFixed(2) || "0.00"}
-                  <br />
-                  Ava: {menu.currentQty || 0} / Min: {menu.minimumQty || 5}
-                  <br />
-                  <span className={`badge ${getStatusLabelClass(menu.menuStatus)}`}>
-                    {menu.menuStatus || "In Stock"}
-                  </span>
-                </p>
-
-                <div className="d-flex gap-2 mt-auto">
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => openEditModal(menu)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleDelete(menu._id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };

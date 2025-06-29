@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { Outlet, Link } from "react-router-dom";
 import { useAuth } from "./ProtectedRoute";
+import useTokenCountdown from "../hooks/useTokenCountdown";
 
 const RoleLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Get user role from AuthContext
   const { user, logout } = useAuth();
+
+  const countdown = useTokenCountdown();
 
   const renderSidebarMenu = () => {
     switch (user?.role) {
@@ -27,6 +30,32 @@ const RoleLayout = () => {
             </li>
             <li className="nav-item mb-2">
               <Link to="/admin/report" className="nav-link text-white">Reports</Link>
+            </li>
+            <li className="nav-item mb-2">
+              <Link to="/admin/employees" className="nav-link text-white">Employees</Link>
+            </li>
+            <li className="nav-item mb-2">
+              <Link to="/admin/attendance" className="nav-link text-white">Attendence</Link>
+            </li>
+            <li className="nav-item mb-2">
+              <Link to="/admin/suppliers" className="nav-link text-white">Suppliers
+              </Link>
+            </li>
+            <li className="nav-item mb-2">
+              <Link to="/admin/expenses" className="nav-link text-white">Expenses
+              </Link>
+            </li>
+            <li className="nav-item mb-2">
+              <Link to="/admin/salaries" className="nav-link text-white">Salary Payments
+              </Link>
+            </li>
+            <li className="nav-item mb-2">
+              <Link to="/admin/kitchen-requests" className="nav-link text-white">Kitchen Requests
+              </Link>
+            </li>
+                
+            <li className="nav-item mb-2">
+              <Link to="/admin/currency" className="nav-link text-white">Currency</Link>
             </li>
           </>
         );
@@ -55,6 +84,10 @@ const RoleLayout = () => {
             </li>
             <li className="nav-item mb-2">
               <Link to="/kitchen/menu" className="nav-link text-white">Manage Menu</Link>
+            </li>
+            <li className="nav-item mb-2">
+              <Link to="/kitchen/kitchen-requestsForm" className="nav-link text-white">Admin Requests 
+              </Link>
             </li>
             
             
@@ -89,6 +122,7 @@ const RoleLayout = () => {
             >
               ☰
             </button>
+            <small className="text-muted ms-3">| ⏳ Session expires in: {countdown}</small>
             <span className="navbar-text ms-auto">
               👤 {user?.role}
               <button

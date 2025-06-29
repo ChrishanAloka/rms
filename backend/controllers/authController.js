@@ -122,9 +122,39 @@ exports.deactivateUser = async (req, res) => {
   const { id } = req.params;
 
   try {
-    await User.findByIdAndUpdate(id, { isActive: false });
-    res.json({ message: "User deactivated" });
+    const updated = await User.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!updated) return res.status(404).json({ error: "User not found" });
+
+    res.json(updated);
   } catch (err) {
+    console.error("Deactivation failed:", err.message);
     res.status(500).json({ error: "Failed to deactivate user" });
+  }
+};
+
+// Reactivate a user
+exports.reactivateUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const updated = await User.findByIdAndUpdate(
+      id,
+      { isActive: true },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(updated);
+  } catch (err) {
+    console.error("Reactivate failed:", err.message);
+    res.status(500).json({ error: "Failed to reactivate user" });
   }
 };
