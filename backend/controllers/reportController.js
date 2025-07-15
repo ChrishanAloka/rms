@@ -1,97 +1,49 @@
-// backend/controllers/reportController.js
 const Order = require("../models/Order");
+const Expense = require("../models/Expense");
 const KitchenBill = require("../models/KitchenBill");
+const Salary = require("../models/Salary");
 
+// GET /api/auth/report/monthly?month=7&year=2024
 exports.getMonthlyReport = async (req, res) => {
-  const { month = new Date().getMonth(), year = new Date().getFullYear() } = req.query;
+  const { month, year } = req.query;
 
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, parseInt(month) + 1, 0);
+  if (!month || !year) {
+    return res.status(400).json({ error: "Month and year are required" });
+  }
 
   try {
-    // Calculate daily net income from orders
-    const incomeData = await Order.aggregate([
-      {
-        $match: {
-          date: { $gte: firstDay, $lte: lastDay },
-          status: "Ready"
-        }
-      },
-      {
-        $unwind: "$items"
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
-          totalRevenue: { $sum: "$items.price" },
-          totalCost: { $sum: "$items.cost" }
-        }
-      },
-      {
-        $addFields: {
-          netIncome: { $subtract: ["$totalRevenue", "$totalCost"] }
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          totalRevenue: 1,
-          totalCost: 1,
-          netIncome: 1
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month - 1, 31);
 
-    // Group kitchen bills by day and sum amount
-    const expenseData = await KitchenBill.aggregate([
-      {
-        $match: {
-          date: { $gte: firstDay, $lte: lastDay }
-        }
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
-          total: { $sum: "$amount" }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
+    // Fetch data
+    const orders = await Order.find({ createdAt: { $gte: start, $lte: end } });
+    const supplierExpenses = await Expense.find({ date: { $gte: start, $lte: end } });
+    const kitchenBills = await KitchenBill.find({ date: { $gte: start, $lte: end } });
+    const salaries = await Salary.find({ date: { $gte: start, $lte: end } });
 
-    const incomeMap = {};
-    incomeData.forEach((doc) => {
-      incomeMap[doc._id] = doc.netIncome;
-    });
+    // Helper: group by day
+    const groupByDay = (data, valueKey = "amount", dateKey = "createdAt") => {
+      const result = {};
+      data.forEach((item) => {
+        const date = new Date(item[dateKey]).toISOString().split("T")[0];
+        result[date] = (result[date] || 0) + item[valueKey];
+      });
+      return result;
+    };
 
-    const expenseMap = {};
-    expenseData.forEach((doc) => {
-      expenseMap[doc._id] = doc.total;
-    });
-
-    const allDates = [...new Set([...Object.keys(incomeMap), ...Object.keys(expenseMap)])].sort();
-
-    const monthlyIncome = {};
-    const monthlyExpenses = {};
-
-    allDates.forEach((date) => {
-      monthlyIncome[date] = incomeMap[date] || 0;
-      monthlyExpenses[date] = expenseMap[date] || 0;
-    });
-
-    const totalIncome = Object.values(monthlyIncome).reduce((a, b) => a + b, 0);
-    const totalExpenses = Object.values(monthlyExpenses).reduce((a, b) => a + b, 0);
-    const netProfit = totalIncome - totalExpenses;
+    const monthlyIncome = groupByDay(orders, "totalPrice", "createdAt");
+    const monthlySupplierExpenses = groupByDay(supplierExpenses, "amount", "date");
+    const monthlyBills = groupByDay(kitchenBills, "amount", "date");
+    const monthlySalaries = groupByDay(salaries, "total", "date");
 
     res.json({
       monthlyIncome,
-      monthlyExpenses,
-      totalIncome,
-      totalExpenses,
-      netProfit
+      monthlySupplierExpenses,
+      monthlyBills,
+      monthlySalaries
     });
   } catch (err) {
-    console.error("Report failed:", err.message);
-    res.status(500).json({ error: "Failed to generate report" });
+    console.error("Failed to generate report:", err.message);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

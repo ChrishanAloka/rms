@@ -148,30 +148,30 @@ const KitchenBills = () => {
 
 
   return (
-    <div>
-      <h2>All Bills</h2>
+    <div className="container py-4">
+      <h2 className="mb-4 fw-bold text-primary border-bottom pb-2">Kitchen Bills</h2>
 
       {/* Add Bill Form */}
-      <form onSubmit={handleSubmit} className="mb-4 p-3 bg-light border rounded">
+      <form onSubmit={handleSubmit} className="p-4 bg-white border rounded shadow-sm mb-5">
         <div className="row g-3">
           <div className="col-md-6">
-            <label className="form-label">Bill Type</label>
+            <label className="form-label fw-semibold">Bill Type</label>
             <select
               name="type"
               value={newBill.type}
               onChange={handleChange}
               className="form-select"
             >
-              <option value="Gas">Gas</option>
-              <option value="Electricity">Electricity</option>
-              <option value="Water">Water</option>
-              <option value="Cleaning">Cleaning</option>
-              <option value="Repairs">Repairs</option>
-              <option value="Other">Other</option>
+              <option>Gas</option>
+              <option>Electricity</option>
+              <option>Water</option>
+              <option>Cleaning</option>
+              <option>Repairs</option>
+              <option>Other</option>
             </select>
           </div>
           <div className="col-md-6">
-            <label className="form-label">Amount ({symbol})</label>
+            <label className="form-label fw-semibold">Amount ({symbol})</label>
             <input
               type="number"
               name="amount"
@@ -184,7 +184,7 @@ const KitchenBills = () => {
             />
           </div>
           <div className="col-md-6">
-            <label className="form-label">Date</label>
+            <label className="form-label fw-semibold">Date</label>
             <input
               type="date"
               name="date"
@@ -195,18 +195,18 @@ const KitchenBills = () => {
             />
           </div>
           <div className="col-12 mt-3">
-            <label className="form-label">Description</label>
+            <label className="form-label fw-semibold">Description</label>
             <textarea
               name="description"
               value={newBill.description}
               onChange={handleChange}
               rows="2"
               className="form-control"
-            ></textarea>
+            />
           </div>
           <div className="col-12 mt-3">
-            <button type="submit" className="btn btn-success w-100">
-              Add Bill
+            <button type="submit" className="btn btn-success w-100 py-2 fs-5">
+              + Add Bill
             </button>
           </div>
         </div>
@@ -214,33 +214,41 @@ const KitchenBills = () => {
 
       {/* Edit Modal */}
       {editingBill && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
           <div className="modal-dialog">
-            <div className="modal-content">
-              <div className="modal-header">
+            <div className="modal-content rounded shadow">
+              <div className="modal-header bg-primary text-white">
                 <h5 className="modal-title">Edit Bill</h5>
-                <button className="btn-close" onClick={() => setEditingBill(null)}></button>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setEditingBill(null)}
+                />
               </div>
               <div className="modal-body">
                 <form onSubmit={handleUpdate}>
                   <div className="mb-3">
-                    <label className="form-label">Bill Type</label>
+                    <label className="form-label fw-semibold">Bill Type</label>
                     <select
                       name="type"
                       value={editData.type}
                       onChange={handleEditChange}
                       className="form-select"
                     >
-                      <option value="Gas">Gas</option>
-                      <option value="Electricity">Electricity</option>
-                      <option value="Water">Water</option>
-                      <option value="Cleaning">Cleaning</option>
-                      <option value="Repairs">Repairs</option>
-                      <option value="Other">Other</option>
+                      <option>Gas</option>
+                      <option>Electricity</option>
+                      <option>Water</option>
+                      <option>Cleaning</option>
+                      <option>Repairs</option>
+                      <option>Other</option>
                     </select>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Amount ({symbol})</label>
+                    <label className="form-label fw-semibold">Amount ({symbol})</label>
                     <input
                       type="number"
                       name="amount"
@@ -252,7 +260,7 @@ const KitchenBills = () => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Date</label>
+                    <label className="form-label fw-semibold">Date</label>
                     <input
                       type="date"
                       name="date"
@@ -263,14 +271,14 @@ const KitchenBills = () => {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Description</label>
+                    <label className="form-label fw-semibold">Description</label>
                     <textarea
                       name="description"
                       value={editData.description}
                       onChange={handleEditChange}
                       rows="2"
                       className="form-control"
-                    ></textarea>
+                    />
                   </div>
                   <div className="d-flex gap-2">
                     <button type="submit" className="btn btn-primary w-100">
@@ -291,56 +299,60 @@ const KitchenBills = () => {
         </div>
       )}
 
-      {/* Bills List */}
+      {/* Bills Table */}
       <div className="mt-4">
-        <h4>Recent Bills</h4>
-        <table className="table table-bordered table-striped">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Type</th>
-              <th>Amount</th>
-              <th>Description</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bills.length === 0 && (
+        <h4 className="mb-3 text-secondary">🧾 Recent Bills</h4>
+        <div className="table-responsive shadow-sm rounded border">
+          <table className="table table-bordered table-striped align-middle mb-0">
+            <thead className="table-dark">
               <tr>
-                <td colSpan="5" className="text-center text-muted">
-                  No bills found
-                </td>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th className="text-center">Actions</th>
               </tr>
-            )}
-
-            {bills.map((bill) => (
-              <tr key={bill._id}>
-                <td>{new Date(bill.date).toLocaleDateString()}</td>
-                <td>{bill.type}</td>
-                <td>{symbol}{bill.amount.toFixed(2)}</td>
-                <td>{bill.description}</td>
-                <td>
-                  <button
-                    className="btn btn-sm btn-primary me-2"
-                    onClick={() => openEditModal(bill)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => handleDelete(bill._id)}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {bills.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="text-center text-muted py-4">
+                    No bills found
+                  </td>
+                </tr>
+              ) : (
+                bills.map(bill => (
+                  <tr key={bill._id}>
+                    <td>{new Date(bill.date).toLocaleDateString()}</td>
+                    <td>{bill.type}</td>
+                    <td>{symbol}{bill.amount.toFixed(2)}</td>
+                    <td>{bill.description || "-"}</td>
+                    <td className="text-center">
+                      <button
+                        className="btn btn-sm btn-primary me-2"
+                        onClick={() => openEditModal(bill)}
+                        title="Edit Bill"
+                      >
+                          ✏️ Edit
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => handleDelete(bill._id)}
+                        title="Delete Bill"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        </div>
 
       {/* Monthly Summary */}
-      <div className="mt-4 p-3 bg-white border rounded shadow-sm">
+      {/* <div className="mt-4 p-3 bg-white border rounded shadow-sm">
         <h5>Monthly Summary</h5>
         <ul className="list-group">
           <li className="list-group-item d-flex justify-content-between align-items-center">
@@ -351,7 +363,7 @@ const KitchenBills = () => {
             </strong>
           </li>
         </ul>
-      </div>
+      </div> */}
 
       <ToastContainer />
     </div>

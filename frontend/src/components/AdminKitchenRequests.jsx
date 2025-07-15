@@ -46,72 +46,87 @@ const AdminKitchenRequests = () => {
   if (loading) return <p>Loading requests...</p>;
 
   return (
-    <div>
-      <h2>Kitchen Supply Requests</h2>
+  <div className="container py-4">
+    <h2 className="mb-4 fw-bold text-primary border-bottom pb-2">
+      Kitchen Supply Requests
+    </h2>
 
-      {/* Request Table */}
-      <table className="table table-bordered table-striped">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Requested By</th>
-            <th>Item</th>
-            <th>Quantity</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {requests.length === 0 && (
-            <tr>
-              <td colSpan="6" className="text-center text-muted">
-                No requests found.
-              </td>
+    {loading ? (
+      <p className="text-info">🔄 Loading requests...</p>
+    ) : requests.length === 0 ? (
+      <div className="alert alert-secondary text-center">
+        🚫 No kitchen supply requests found.
+      </div>
+    ) : (
+      <div className="table-responsive shadow-sm border rounded">
+        <table className="table table-hover table-bordered align-middle mb-0">
+          <thead className="table-light">
+            <tr className="text-center">
+              <th>Date</th>
+              <th>Requested By</th>
+              <th>Item</th>
+              <th>Quantity</th>
+              <th>Status</th>
+              <th>Actions</th>
             </tr>
-          )}
-          {requests.map((req, idx) => (
-            <tr key={idx}>
-              <td>{new Date(req.date).toLocaleDateString()}</td>
-              <td>{req.requestedBy?.name || "Unknown"} ({req.requestedBy?.role || ""})</td>
-              <td>{req.item}</td>
-              <td>{req.quantity}</td>
-              <td>
-                <span
-                  className={`badge ${
-                    req.status === "Pending"
-                      ? "bg-warning text-dark"
-                      : req.status === "Approved"
-                      ? "bg-success"
-                      : "bg-danger"
-                  }`}
-                >
-                  {req.status}
-                </span>
-              </td>
-              <td>
-                {req.status === "Pending" && (
-                  <>
-                    <button
-                      className="btn btn-sm btn-success me-2"
-                      onClick={() => handleStatusChange(req._id, "Approved")}
-                    >
-                      ✅ Approve
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => handleStatusChange(req._id, "Rejected")}
-                    >
-                      ❌ Reject
-                    </button>
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+          </thead>
+
+          <tbody>
+            {requests.map((req, idx) => (
+              <tr key={idx}>
+                <td>{new Date(req.date).toLocaleDateString()}</td>
+                <td>
+                  {req.requestedBy?.name || "Unknown"}
+                  <span className="text-muted small ms-1">
+                    ({req.requestedBy?.role || "—"})
+                  </span>
+                </td>
+                <td>{req.item}</td>
+                <td>
+                  {req.quantity} {req.unit}
+                </td>
+                <td className="text-center">
+                  <span
+                    className={`badge rounded-pill px-3 py-2 fw-semibold ${
+                      req.status === "Pending"
+                        ? "bg-warning text-dark"
+                        : req.status === "Approved"
+                        ? "bg-success"
+                        : "bg-danger"
+                    }`}
+                  >
+                    {req.status}
+                  </span>
+                </td>
+                <td className="text-center">
+                  {req.status === "Pending" ? (
+                    <div className="d-flex justify-content-center gap-2">
+                      <button
+                        className="btn btn-sm btn-success"
+                        onClick={() => handleStatusChange(req._id, "Approved")}
+                      >
+                        ✅ Approve
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => handleStatusChange(req._id, "Rejected")}
+                      >
+                        ❌ Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-muted small">No action available</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+);
+
 };
 
 export default AdminKitchenRequests;

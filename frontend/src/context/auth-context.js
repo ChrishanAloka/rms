@@ -107,6 +107,9 @@ export const AuthProvider = ({ children }) => {
 
   const login = (data) => {
     localStorage.setItem("token", data.token);
+    localStorage.setItem("userId", data._id);       // User ID
+    localStorage.setItem("userRole", data.role);     // Role
+    localStorage.setItem("userName", data.name);
     const decoded = JSON.parse(atob(data.token.split(".")[1]));
     setUser(decoded);
   };

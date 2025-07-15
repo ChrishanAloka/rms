@@ -131,24 +131,29 @@ const AdminUsers = () => {
 };
 
   return (
-    <div>
-      <h2>User Management</h2>
-      <ToastContainer />
+  <div className="container my-5">
+    <h2 className="mb-4 fw-bold text-primary"> User Management</h2>
 
-      {/* Export Buttons */}
-      <div className="d-flex justify-content-between mb-3">
-        <button className="btn btn-success me-2" onClick={exportToExcel}>
-          Export to Excel
+    {/* Export Actions */}
+    <div className="d-flex flex-wrap gap-3 mb-3 justify-content-between align-items-center">
+      <div>
+        <button className="btn btn-outline-success me-2" onClick={exportToExcel}>
+          📤 Export to Excel
         </button>
-        <button className="btn btn-danger" onClick={exportToPDF}>
-          Export to PDF
+        <button className="btn btn-outline-danger" onClick={exportToPDF}>
+          📄 Export to PDF
         </button>
       </div>
+      <span className="text-muted small">
+        Total Users: <strong>{users.length}</strong>
+      </span>
+    </div>
 
-      {/* Table */}
-      <table id="user-table" className="table table-bordered table-striped">
-        <thead>
-          <tr>
+    {/* User Table */}
+    <div className="table-responsive">
+      <table id="user-table" className="table table-hover table-bordered align-middle shadow-sm">
+        <thead className="table-light">
+          <tr className="text-center">
             <th>Name</th>
             <th>Email</th>
             <th>Role</th>
@@ -156,63 +161,67 @@ const AdminUsers = () => {
             <th>Actions</th>
           </tr>
         </thead>
-        <tbody>
-          {users.length === 0 && (
-            <tr>
-              <td colSpan="5" className="text-center text-muted">
-                No users found.
-              </td>
-            </tr>
-          )}
 
-          {users.map((user) => (
-            <tr key={user._id}>
-              <td>{user.name}</td>
-              <td>{user.email}</td>
-              <td>
-                <select
-                  value={user.role}
-                  onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                  className="form-select"
-                  disabled={!user.isActive}
-                >
-                  <option value="admin">Admin</option>
-                  <option value="cashier">Cashier</option>
-                  <option value="kitchen">Kitchen</option>
-                </select>
-              </td>
-              <td>
-                <span
-                  className={
-                    user.isActive ? "badge bg-success" : "badge bg-secondary"
-                  }
-                >
-                  {user.isActive ? "Active" : "Inactive"}
-                </span>
-              </td>
-              <td>
-                {!user.isActive ? (
-                  <button
-                    className="btn btn-sm btn-success"
-                    onClick={() => handleReactivate(user._id)}
-                  >
-                    Reactivate
-                  </button>
-                ) : (
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => handleDeactivate(user._id)}
-                  >
-                    Deactivate
-                  </button>
-                )}
+        <tbody>
+          {users.length === 0 ? (
+            <tr>
+              <td colSpan="5" className="text-center text-muted py-4">
+                🚫 No users found.
               </td>
             </tr>
-          ))}
+          ) : (
+            users.map((user) => (
+              <tr key={user._id}>
+                <td>{user.name}</td>
+                <td>{user.email}</td>
+                <td className="text-center">
+                  <select
+                    value={user.role}
+                    onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                    className="form-select form-select-sm"
+                    disabled={!user.isActive}
+                  >
+                    <option value="admin">Admin</option>
+                    <option value="cashier">Cashier</option>
+                    <option value="kitchen">Kitchen</option>
+                  </select>
+                </td>
+                <td className="text-center">
+                  <span
+                    className={`badge rounded-pill px-3 py-2 fw-semibold ${
+                      user.isActive ? "bg-success" : "bg-secondary"
+                    }`}
+                  >
+                    {user.isActive ? "Active" : "Inactive"}
+                  </span>
+                </td>
+                <td className="text-center">
+                  {!user.isActive ? (
+                    <button
+                      className="btn btn-sm btn-success"
+                      onClick={() => handleReactivate(user._id)}
+                    >
+                      🔓 Reactivate
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => handleDeactivate(user._id)}
+                    >
+                      🔒 Deactivate
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
-  );
+    <ToastContainer />
+  </div>
+);
+
 };
 
 export default AdminUsers;

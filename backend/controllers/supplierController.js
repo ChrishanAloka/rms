@@ -2,14 +2,19 @@ const Supplier = require("../models/Supplier");
 
 // Register new supplier
 exports.registerSupplier = async (req, res) => {
-  const { name, contact, email, address } = req.body;
+  const { name, contact, email, address, companyName } = req.body;
 
   try {
-    const existing = await Supplier.findOne({ name });
-    if (existing) return res.status(400).json({ error: "Supplier already exists" });
+    const existingName = await Supplier.findOne({ name });
+    const existingCompany = await Supplier.findOne({ companyName });
+    const existingContact = await Supplier.findOne({ contact });
+    if (existingName) return res.status(400).json({ error: "Supplier already exists by Name" });
+    if (existingCompany) return res.status(400).json({ error: "Supplier already exists by Company" });
+    if (existingContact) return res.status(400).json({ error: "Supplier already exists by Contact" });
 
     const newSupplier = new Supplier({
       name,
+      companyName,
       contact,
       email,
       address,
@@ -37,12 +42,12 @@ exports.getAllSuppliers = async (req, res) => {
 // Edit supplier
 exports.editSupplier = async (req, res) => {
   const { id } = req.params;
-  const { name, contact, email, address } = req.body;
+  const { name, contact, email, address, companyName } = req.body;
 
   try {
     const updated = await Supplier.findByIdAndUpdate(
       id,
-      { name, contact, email, address },
+      { name, contact, email, address, companyName },
       { new: true }
     );
 

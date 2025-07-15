@@ -6,9 +6,19 @@ const expenseSchema = new mongoose.Schema({
     ref: "Supplier",
     required: true
   },
-  amount: { type: Number, required: true },
-  description: { type: String },
-  date: { type: Date, default: Date.now }
+  amount: {
+    type: Number,
+    required: true
+  },
+  description: String,
+  date: {
+    type: Date,
+    default: Date.now
+  },
+  billNo: {
+    type: String,
+    required: true
+  }
 });
 
 module.exports = mongoose.model("Expense", expenseSchema);

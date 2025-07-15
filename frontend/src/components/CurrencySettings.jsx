@@ -51,11 +51,11 @@ const CurrencySettings = () => {
   };
 
   return (
-    <div>
-      <h2>Currency Settings</h2>
+    <div className="container my-5" style={{ maxWidth: 500 }}>
+      <h2 className="mb-4 text-center">Currency Settings</h2>
 
       <div className="mb-3">
-        <label className="form-label">Currency Code</label>
+        <label className="form-label fw-semibold">Currency Code</label>
         <input
           type="text"
           value={currency}
@@ -65,8 +65,8 @@ const CurrencySettings = () => {
         />
       </div>
 
-      <div className="mb-3">
-        <label className="form-label">Symbol</label>
+      <div className="mb-4">
+        <label className="form-label fw-semibold">Symbol</label>
         <input
           type="text"
           value={symbol}
@@ -76,7 +76,10 @@ const CurrencySettings = () => {
         />
       </div>
 
-      <button className="btn btn-primary" onClick={handleSave}>
+      <button
+        className="btn btn-primary w-100 fw-bold"
+        onClick={handleSave}
+      >
         Save Changes
       </button>
     </div>

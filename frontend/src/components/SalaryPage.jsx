@@ -118,73 +118,76 @@ const SalaryPage = () => {
     otHourRate: emp.otHourRate
   }));
 
+  const symbol = localStorage.getItem("currencySymbol") || "$";
+
   return (
-    <div>
-      <h2>Record Employee Salary</h2>
-      <ToastContainer />
+  <div className="container my-4">
+    <h2 className="mb-4 fw-bold text-primary">Record Employee Salary</h2>
+    <ToastContainer />
 
-      {/* Salary Form */}
-      <form onSubmit={handleSubmit} className="mb-4 p-3 bg-light border rounded">
-        <div className="row g-3">
-          <div className="col-md-6">
-            <label className="form-label">Select Employee *</label>
-            <Select
-              options={employeeOptions}
-              onChange={handleEmployeeChange}
-              value={formData.employee}
-              placeholder="Search or select..."
-              isClearable
-              required
-            />
-          </div>
-          <div className="col-md-6">
-            <label className="form-label">Basic Salary *</label>
-            <input
-              type="number"
-              name="basicSalary"
-              value={formData.basicSalary}
-              onChange={handleChange}
-              step="0.01"
-              min="0"
-              className="form-control"
-              required
-            />
-          </div>
-          <div className="col-md-6">
-            <label className="form-label">OT Hours</label>
-            <input
-              type="number"
-              name="otHours"
-              value={formData.otHours}
-              onChange={handleChange}
-              min="0"
-              className="form-control"
-            />
-          </div>
-          <div className="col-md-6">
-            <label className="form-label">OT Rate ($)</label>
-            <input
-              type="number"
-              name="otRate"
-              value={formData.otRate}
-              onChange={handleChange}
-              step="0.01"
-              min="0"
-              className="form-control"
-            />
-          </div>
-          <div className="col-12 mt-3">
-            <button type="submit" className="btn btn-success w-100">
-              Record Salary
-            </button>
-          </div>
+    {/* Salary Form */}
+    <form onSubmit={handleSubmit} className="mb-4 p-4 bg-light border rounded shadow-sm">
+      <div className="row g-3">
+        <div className="col-md-6">
+          <label className="form-label">Select Employee *</label>
+          <Select
+            options={employeeOptions}
+            onChange={handleEmployeeChange}
+            value={formData.employee}
+            placeholder="Search or select..."
+            isClearable
+            required
+          />
         </div>
-      </form>
+        <div className="col-md-6">
+          <label className="form-label">Basic Salary *</label>
+          <input
+            type="number"
+            name="basicSalary"
+            value={formData.basicSalary}
+            onChange={handleChange}
+            step="0.01"
+            min="0"
+            className="form-control"
+            required
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">OT Hours</label>
+          <input
+            type="number"
+            name="otHours"
+            value={formData.otHours}
+            onChange={handleChange}
+            min="0"
+            className="form-control"
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label">OT Rate ({symbol})</label>
+          <input
+            type="number"
+            name="otRate"
+            value={formData.otRate}
+            onChange={handleChange}
+            step="0.01"
+            min="0"
+            className="form-control"
+          />
+        </div>
+        <div className="col-12 mt-3 d-flex justify-content-center justify-content-md-start">
+          <button type="submit" className="btn btn-success w-100 w-md-auto px-4 py-2">
+            Record Salary
+          </button>
+        </div>
+      </div>
+    </form>
 
-      {/* Salary Records */}
-      <h4>Salary Records</h4>
-      <table className="table table-bordered table-striped">
-        <thead>
+    {/* Salary Records */}
+    <h4 className="mb-3">Salary Records</h4>
+    <div className="table-responsive shadow-sm rounded border">
+      <table className="table table-bordered table-striped table-hover mb-0">
+        <thead className="table-dark">
           <tr>
             <th>Date</th>
             <th>Employee</th>
@@ -194,28 +197,31 @@ const SalaryPage = () => {
           </tr>
         </thead>
         <tbody>
-          {salaries.length === 0 && (
+          {salaries.length === 0 ? (
             <tr>
-              <td colSpan="5" className="text-center text-muted">
+              <td colSpan="5" className="text-center text-muted fst-italic py-3">
                 No records found
               </td>
             </tr>
+          ) : (
+            salaries.map((s, idx) => (
+              <tr key={idx}>
+                <td>{new Date(s.date).toLocaleDateString()}</td>
+                <td>
+                  {s.employee?.name || "Unknown"} ({s.employee?.role || ""})
+                </td>
+                <td>{symbol}{s.basicSalary?.toFixed(2)}</td>
+                <td>{s.otHours}</td>
+                <td>{symbol}{s.total?.toFixed(2)}</td>
+              </tr>
+            ))
           )}
-          {salaries.map((s, idx) => (
-            <tr key={idx}>
-              <td>{new Date(s.date).toLocaleDateString()}</td>
-              <td>
-                {s.employee?.name || "Unknown"} ({s.employee?.role || ""})
-              </td>
-              <td>${s.basicSalary?.toFixed(2)}</td>
-              <td>{s.otHours}</td>
-              <td>${s.total?.toFixed(2)}</td>
-            </tr>
-          ))}
         </tbody>
       </table>
     </div>
-  );
+  </div>
+);
+
 };
 
 export default SalaryPage;

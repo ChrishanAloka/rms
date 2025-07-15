@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Select from "react-select";
+import { ToastContainer, toast } from "react-toastify";
 
-const AddAttendance = () => {
+const AttendancePage = () => {
   const [employees, setEmployees] = useState([]);
   const [selectedEmp, setSelectedEmp] = useState(null);
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split("T")[0],
-    inTime: "08:00",
-    breakStart: "",
-    breakEnd: "",
-    outTime: "17:00"
-  });
+  const [punches, setPunches] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // Load employees on mount
   useEffect(() => {
@@ -26,151 +22,248 @@ const AddAttendance = () => {
       });
       setEmployees(res.data);
     } catch (err) {
-      alert("Failed to load employees");
-    }
-  };
-
-  // Handle input changes
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  // Handle employee select
-  const handleEmployeeChange = (selectedOption) => {
-    if (!selectedOption) return;
-
-    setSelectedEmp(selectedOption);
-  };
-
-  // Submit attendance
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!selectedEmp) {
-      alert("Please select an employee");
-      return;
-    }
-
-    const payload = {
-      ...formData,
-      employeeId: selectedEmp.value
-    };
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.post("https://rms-6one.onrender.com/api/auth/attendance/add", payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      alert("Attendance added successfully!");
-      window.location.reload(); // Optional: redirect or reset form
-    } catch (err) {
-      console.error("Failed to add attendance:", err.message);
-      alert("Failed to save attendance");
+      console.error("Failed to load employees:", err.message);
+      toast.error("Failed to load employees");
     }
   };
 
   // Format options for react-select
   const employeeOptions = employees.map(emp => ({
     value: emp._id,
-    label: `${emp.name} (${emp.role})`,
-    phone: emp.phone,
-    nic: emp.nic
+    label: `${emp.name} (${emp.id})`
   }));
 
-  return (
-    <div>
-      <h2>Record Employee Attendance</h2>
+  // Fetch daily punches
+  const fetchPunches = async (empId) => {
+    setLoading(true);
+    try {
+      const today = new Date();
+      const month = today.getMonth() + 1;
+      const year = today.getFullYear();
 
-      {/* Select Employee */}
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        "https://rms-6one.onrender.com/api/auth/attendance/summary",
+        {
+          params: { _id: empId, month, year },
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setPunches(res.data.daily || []);
+    } catch (err) {
+      console.error("Failed to load punches:", err.response?.data || err.message);
+      toast.error("Failed to load punch history");
+      setPunches([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle employee change
+  const handleEmployeeChange = (selectedOption) => {
+    if (!selectedOption) {
+      setSelectedEmp(null);
+      setPunches([]);
+      return;
+    }
+
+    setSelectedEmp(selectedOption);
+    fetchPunches(selectedOption.value);
+  };
+
+  // Record punch time
+  const recordPunch = async (type) => {
+    if (!selectedEmp) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const punchTime = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      const payload = {
+        employeeId: selectedEmp.value,
+        punchType: type
+      };
+
+      const res = await axios.post(
+        "https://rms-6one.onrender.com/api/auth/attendance/punch",
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      toast.success(`${selectedEmp.label} - ${type} at ${punchTime}`);
+      fetchPunches(selectedEmp.value);
+    } catch (err) {
+      console.error("Failed to record punch:", err.response?.data || err.message);
+      toast.error(`Failed to record ${type}`);
+    }
+  };
+
+  // Determine which buttons can be shown
+  const canPunch = (type) => {
+    if (!punches.length) {
+      // First punch must be Clock In
+      return type === "In";
+    }
+
+    const latestDay = punches[punches.length - 1];
+    const lastPunches = latestDay?.punches || [];
+    const lastPunch = lastPunches[lastPunches.length - 1];
+
+    switch (type) {
+      case "In":
+        // Only show if no punches or last was "Out"
+        return !lastPunch || lastPunch?.type === "Out";;
+
+      case "Break In":
+        // Show if last punch was "In" and Break In hasn't been pressed yet
+        return lastPunch?.type === "In";
+
+      case "Break Out":
+        // Show only after Break In is pressed
+        return lastPunch?.type === "Break In";
+
+      case "Out":
+        // Show only after Break Out is pressed
+        return lastPunch?.type === "Break Out";
+
+      default:
+        return false;
+    }
+  };
+
+  return (
+    <div className="container mt-4">
+      <h2>⏰ Employee Time Punch</h2>
+
+      {/* Employee Selection */}
       <div className="mb-4">
-        <label className="form-label">Select Employee *</label>
+        <label>Select Employee</label>
         <Select
           options={employeeOptions}
           value={selectedEmp}
           onChange={handleEmployeeChange}
-          placeholder="Search or select employee..."
+          placeholder="Search or select..."
           isClearable
           isSearchable
         />
       </div>
 
-      {/* Attendance Form */}
+      {/* Punch Buttons */}
       {selectedEmp && (
-        <form onSubmit={handleSubmit} className="mt-3 p-3 bg-light border rounded">
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label className="form-label">Date</label>
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                className="form-control"
-                required
-              />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">In Time</label>
-              <input
-                type="time"
-                name="inTime"
-                value={formData.inTime}
-                onChange={handleChange}
-                className="form-control"
-                required
-              />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Break Start</label>
-              <input
-                type="time"
-                name="breakStart"
-                value={formData.breakStart}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Break End</label>
-              <input
-                type="time"
-                name="breakEnd"
-                value={formData.breakEnd}
-                onChange={handleChange}
-                className="form-control"
-              />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Out Time</label>
-              <input
-                type="time"
-                name="outTime"
-                value={formData.outTime}
-                onChange={handleChange}
-                className="form-control"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Employee Info Preview */}
-          <div className="mt-3 p-3 bg-white border rounded shadow-sm">
-            <h5>Selected Employee</h5>
-            <p><strong>Name:</strong> {selectedEmp.label}</p>
-            <p><strong>Phone:</strong> {selectedEmp.phone || "-"}</p>
-            <p><strong>NIC:</strong> {selectedEmp.nic || "-"}</p>
-          </div>
-
-          {/* Submit Button */}
-          <div className="mt-3">
-            <button type="submit" className="btn btn-success w-100">
-              Save Attendance
+        <div className="text-center mb-4">
+          {canPunch("In") && (
+            <button
+              className="btn btn-success fs-5 px-4 py-2 me-2"
+              onClick={() => recordPunch("In")}
+            >
+              🔹 Clock In
             </button>
-          </div>
-        </form>
+          )}
+
+          {canPunch("Break In") && (
+            <button
+              className="btn btn-warning fs-5 px-4 py-2 me-2"
+              onClick={() => recordPunch("Break In")}
+            >
+              ⏸ Break In
+            </button>
+          )}
+
+          {canPunch("Break Out") && (
+            <button
+              className="btn btn-primary fs-5 px-4 py-2 me-2"
+              onClick={() => recordPunch("Break Out")}
+            >
+              ▶️ Break Out
+            </button>
+          )}
+
+          {canPunch("Out") && (
+            <button
+              className="btn btn-danger fs-5 px-4 py-2"
+              onClick={() => recordPunch("Out")}
+            >
+              🔚 Clock Out
+            </button>
+          )}
+        </div>
       )}
+
+      {/* Daily Punch Table */}
+      {selectedEmp && (
+        <div>
+          <h4>Daily Punch Log</h4>
+          {loading ? (
+            <p>Loading...</p>
+          ) : punches.length === 0 ? (
+            <p>No punches recorded yet.</p>
+          ) : (
+            <table className="table table-bordered align-middle">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>In</th>
+                  <th>Break In</th>
+                  <th>Break Out</th>
+                  <th>Out</th>
+                  <th>Total Hours</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {punches.map((day, idx) => {
+                  const punchesMap = {};
+                  day.punches.forEach(p => {
+                    punchesMap[p.type] = p.time;
+                  });
+
+                  const totalHours = parseFloat(day.totalHours || 0);
+                  let status = "On Time";
+                  if (totalHours > 8) status = "Overtime";
+                  else if (totalHours < 8) status = "Undertime";
+
+                  return (
+                    <tr key={idx}>
+                      <td>{new Date(day.date).toLocaleDateString()}</td>
+                      <td>{punchesMap["In"] || "-"}</td>
+                      <td>{punchesMap["Break In"] || "-"}</td>
+                      <td>{punchesMap["Break Out"] || "-"}</td>
+                      <td>{punchesMap["Out"] || "-"}</td>
+                      <td>{totalHours.toFixed(2)}</td>
+                      <td>
+                        <span
+                          className={`badge ${
+                            status === "Overtime"
+                              ? "bg-success text-white"
+                              : status === "Undertime"
+                              ? "bg-warning text-dark"
+                              : "bg-secondary"
+                          }`}
+                        >
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      <ToastContainer />
     </div>
   );
 };
 
-export default AddAttendance;
+export default AttendancePage;

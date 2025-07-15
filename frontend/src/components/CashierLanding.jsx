@@ -1,12 +1,11 @@
-// src/components/CashierLanding.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
-import ReceiptModal from "./ReceiptModal";
 import PaymentModal from "./PaymentModal";
+import ReceiptModal from "./ReceiptModal";
 
 const CashierLanding = () => {
-  const [menus, setMenus] = useState([]); // ✅ Initialize menus first
+  const [menus, setMenus] = useState([]);
   const [cart, setCart] = useState([]);
   const [customer, setCustomer] = useState({
     phone: "",
@@ -17,37 +16,32 @@ const CashierLanding = () => {
   const [receiptOrder, setReceiptOrder] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [orderData, setOrderData] = useState(null);
-
-  // Search & Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [serviceChargeSettings, setServiceChargeSettings] = useState({
+    dineInCharge: 0,
+    isActive: false
+  });
+  const [deliveryChargeSettings, setDeliveryChargeSettings] = useState({
+    amount: 0,
+    isActive: false
+  });
 
-  // Load menus on mount
+
+  // Load menus and service charge
   useEffect(() => {
     fetchMenus();
+    fetchServiceCharge();
+    fetchDeliveryCharge();
   }, []);
 
-  const fetchMenus = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get("https://rms-6one.onrender.com/api/auth/menus", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setMenus(res.data);
-    } catch (err) {
-      console.error("Failed to load menus:", err.message);
-    }
-  };
-
-  // Auto-fill customer name if phone exists
+  // Auto-fill customer name when phone changes
   useEffect(() => {
     if (!customer.phone) return;
 
     const timer = setTimeout(async () => {
       try {
         const token = localStorage.getItem("token");
-
         const res = await axios.get("https://rms-6one.onrender.com/api/auth/customer", {
           params: { phone: customer.phone },
           headers: { Authorization: `Bearer ${token}` }
@@ -64,58 +58,133 @@ const CashierLanding = () => {
     return () => clearTimeout(timer);
   }, [customer.phone]);
 
-  // Handle customer input change
-  const handleCustomerChange = (e) =>
-    setCustomer({ ...customer, [e.target.name]: e.target.value });
+  const fetchMenus = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("https://rms-6one.onrender.com/api/auth/menus", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMenus(res.data);
+    } catch (err) {
+      console.error("Failed to load menus:", err.message);
+    }
+  };
 
-  // Add to cart
+  const fetchServiceCharge = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await axios.get(
+      "https://rms-6one.onrender.com/api/auth/admin/service-charge",
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    const { dineInCharge, isActive } = res.data;
+
+    setServiceChargeSettings({
+      dineInCharge,
+      isActive: isActive === true || isActive === "true" // ✅ ensures boolean
+    });
+  } catch (err) {
+    console.error("Failed to load service charge:", err.message);
+    console.error("Failed to load service charge:", err.response?.data || err.message);
+
+  }
+  };
+
+  const fetchDeliveryCharge = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("https://rms-6one.onrender.com/api/auth/admin/delivery-charge", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDeliveryChargeSettings(res.data);
+    } catch (err) {
+      console.error("Failed to load delivery charge:", err.message);
+    }
+  };
+
+
+  // Add item to cart
   const addToCart = (menu) => {
-    if (!menu._id || menu.currentQty <= 0) return;
-    const existingItem = cart.find((item) => item._id === menu._id);
-    if (!existingItem) {
+    const existing = cart.find((item) => item._id === menu._id);
+
+    if (existing) {
+      setCart(
+        cart.map((item) =>
+          item._id === menu._id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      );
+    } else {
       setCart([...cart, { ...menu, quantity: 1 }]);
+    }
+  };
+
+  // Remove item from cart
+  const removeFromCart = (menu) => {
+    const existing = cart.find((item) => item._id === menu._id);
+
+    if (existing && existing.quantity <= 1) {
+      setCart(cart.filter((item) => item._id !== menu._id));
     } else {
       setCart(
         cart.map((item) =>
-          item._id === menu._id ? { ...item, quantity: item.quantity + 1 } : item
-        )
+          item._id === menu._id
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        ).filter((item) => item.quantity > 0)
       );
     }
   };
 
-  // Remove from cart
-  const removeFromCart = (menuId) => {
-    setCart(cart.filter((item) => item._id !== menuId));
-  };
-
-  // Update quantity in cart
-  const updateQuantity = (menuId, delta) => {
-    setCart(
-      cart.map((item) =>
-        item._id === menuId
-          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-          : item
-      )
-    );
-  };
-
-  // Step 1: Validate and go to payment
+  // Proceed to payment
   const goToPayment = () => {
     const { phone, name } = customer;
-    const total = cart.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
 
     if (!phone.trim() || !name.trim()) {
-      toast.error("Phone and Name are required.");
+      toast.warn("Please enter customer phone and name");
+      return;
+    }
+
+    if (customer.orderType === "table" && !customer.tableNo.trim()) {
+      toast.warn("Table number is required for Dine-In orders");
+      return;
+    }
+
+    if (customer.orderType === "takeaway" && !customer.deliveryType) {
+      toast.warn("Delivery Type is required for Dine-In orders");
       return;
     }
 
     if (cart.length === 0) {
-      toast.error("Please select at least one item.");
+      toast.warn("Please add at least one item");
       return;
     }
+
+    const subtotal = cart.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
+    let serviceCharge = 0;
+    let deliveryCharge = 0;
+    let finalTotal = subtotal;
+
+    // Apply service charge
+    if (customer.orderType === "table" && serviceChargeSettings.isActive) {
+      serviceCharge = subtotal * (serviceChargeSettings.dineInCharge / 100);
+      finalTotal += serviceCharge;
+    }
+
+    // Apply delivery charge
+    if (customer.orderType === "takeaway" && deliveryChargeSettings.isActive && customer.deliveryType === "Delivery Service") {
+      deliveryCharge = deliveryChargeSettings.amount;
+      finalTotal += deliveryCharge;
+    }
+    
 
     setOrderData({
       customerName: name,
@@ -128,59 +197,51 @@ const CashierLanding = () => {
         quantity: item.quantity,
         imageUrl: item.imageUrl
       })),
-      totalPrice: total
+      subtotal,
+      serviceCharge,
+      deliveryType: customer.orderType === "takeaway" ? customer.deliveryType : null,
+      deliveryCharge,
+      totalPrice: finalTotal
     });
 
     setShowPaymentModal(true);
   };
 
-  const placeOrder = () => {
-  setFormSubmitted(true); // Mark form as submitted
-
-  const { phone, name } = customer;
-
-  if (!phone.trim() || !name.trim()) {
-    toast.error("Phone and Name are required");
-    return;
-  }
-
-  if (customer.orderType === "table" && !customer.tableNo.trim()) {
-    toast.error("Table No is required for dine-in orders");
-    return;
-  }
-
-  if (cart.length === 0) {
-    toast.error("Please select at least one item");
-    return;
-  }
-
-  setShowPaymentModal(true);
-};
-
-  // Step 2: Confirm order and send to backend
-  const submitConfirmedOrder = async (paymentAmount) => {
+  // Confirm order and send to backend
+  const submitConfirmedOrder = async (paymentData) => {
     try {
       const token = localStorage.getItem("token");
+      const invoiceNo = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
       const payload = {
         ...customer,
         ...orderData,
-        paymentAmount,
-        changeDue: (paymentAmount - orderData.totalPrice).toFixed(2)
+        payment: {
+          cash: paymentData.cash,
+          card: paymentData.card,
+          bankTransfer: paymentData.bankTransfer,
+          totalPaid: paymentData.totalPaid,
+          changeDue: paymentData.changeDue,
+          notes: paymentData.notes
+        },
+        invoiceNo,
       };
 
-      const res = await axios.post("https://rms-6one.onrender.com/api/auth/order", payload, {
-        headers: {
-          Authorization: `Bearer ${token}`
+      const res = await axios.post(
+        "https://rms-6one.onrender.com/api/auth/order",
+        payload,
+        {
+          headers: { Authorization: `Bearer ${token}` }
         }
-      });
+      );
 
       setReceiptOrder(res.data);
       setCustomer({
         phone: "",
         name: "",
         orderType: "table",
-        tableNo: ""
+        tableNo: "",
+        deliveryType: "Customer Pickup"
       });
       setCart([]);
       fetchMenus();
@@ -192,245 +253,311 @@ const CashierLanding = () => {
     }
   };
 
-  // 🔍 Search & Filter Menus
-  const [filteredMenus, setFilteredMenus] = useState([]);
+  // Filter menus by search & category
+  const filteredMenus = menus.filter((menu) => {
+    const matchesSearch = menu.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      !selectedCategory || menu.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-  useEffect(() => {
-    const results = menus.filter((menu) => {
-      const matchesSearch = menu.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory =
-        !selectedCategory || menu.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    });
-    setFilteredMenus(results);
-  }, [searchTerm, selectedCategory, menus]);
+  // ✅ LIVE subtotal calculation
+const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+const serviceCharge = customer.orderType === "table" && serviceChargeSettings.isActive
+  ? subtotal * (serviceChargeSettings.dineInCharge / 100)
+  : 0;
+const deliveryCharge = customer.orderType === "takeaway" && deliveryChargeSettings.isActive && customer.deliveryType === "Delivery Service"
+    ? deliveryChargeSettings.amount
+    : 0;
+
+const finalTotal = subtotal + serviceCharge + deliveryCharge;
+
+  const symbol = localStorage.getItem("currencySymbol") || "$";
 
   return (
-    <div>
-      <h2>Cashier Dashboard</h2>
+    <div className="container-fluid px-3">
 
       {/* Customer Info */}
-      <div className="mb-4 p-3 bg-light border rounded">
-        <h5>Customer Details</h5>
+      <div className="mb-4 bg-white p-4 rounded shadow-sm">
+        <h4>Customer Details</h4>
         <div className="row g-3">
-          {/* Phone */}
-          <div className="col-md-6">
-            <label className="form-label">Customer Phone *</label>
+          <div className="col-md-3">
+            <label>Phone *</label>
             <input
-              type="text"
               name="phone"
               value={customer.phone}
-              onChange={handleCustomerChange}
-              className={`form-control ${formSubmitted && !customer.phone ? "is-invalid" : ""}`}
+              onChange={(e) =>
+                setCustomer({
+                  ...customer,
+                  phone: e.target.value
+                })
+              }
+              className="form-control"
+              placeholder="e.g., 0771234567"
             />
-            {formSubmitted && !customer.phone && (
-              <div className="invalid-feedback">Enter valid phone number</div>
-            )}
           </div>
 
-          {/* Name */}
-          <div className="col-md-6">
-            <label className="form-label">Customer Name *</label>
+          <div className="col-md-3">
+            <label>Name *</label>
             <input
-              type="text"
               name="name"
               value={customer.name}
-              onChange={handleCustomerChange}
-              className={`form-control ${formSubmitted && !customer.name ? "is-invalid" : ""}`}
+              onChange={(e) =>
+                setCustomer({
+                  ...customer,
+                  name: e.target.value
+                })
+              }
+              className="form-control"
+              placeholder="John Doe"
             />
-            {formSubmitted && !customer.name && (
-              <div className="invalid-feedback">Enter customer name</div>
-            )}
           </div>
-        </div>
 
-        {/* Order Type */}
-        <div className="mt-3">
-          <label className="form-label">Order Type</label>
-          <select
-            name="orderType"
-            value={customer.orderType}
-            onChange={handleCustomerChange}
-            className="form-select mb-2"
-          >
-            <option value="table">Dine In</option>
-            <option value="takeaway">Takeaway</option>
-          </select>
-
+          <div className="col-md-3">
+            <label>Order Type</label>
+            <select
+              name="orderType"
+              value={customer.orderType}
+              onChange={(e) =>
+                setCustomer({
+                  ...customer,
+                  orderType: e.target.value
+                })
+              }
+              className="form-select"
+            >
+              <option value="table">Dine In</option>
+              <option value="takeaway">Takeaway</option>
+            </select>
+          </div>
+          
           {customer.orderType === "table" && (
             <>
-              <label className="form-label mt-2">Table No *</label>
-               <input
-                name="tableNo"
-                value={customer.tableNo}
-                onChange={handleCustomerChange}
-                className={`form-control ${
-                  formSubmitted &&
-                  customer.orderType === "table" &&
-                  !customer.tableNo
-                    ? "is-invalid"
-                    : ""
-                }`}
-              />
-              {formSubmitted &&
-                customer.orderType === "table" &&
-                !customer.tableNo && (
-                  <div className="invalid-feedback">
-                    Table No is required for dine-in orders
-                  </div>
-                )}
+              <div className="col-md-3">
+                <label>Table No</label>
+                <input
+                  name="tableNo"
+                  value={customer.tableNo}
+                  onChange={(e) =>
+                    setCustomer({
+                      ...customer,
+                      tableNo: e.target.value
+                    })
+                  }
+                  className="form-control"
+                  placeholder="-"
+                />
+              </div>
             </>
           )}
+
+          {/* Delivery Type (only for Takeaway) */}
+        {customer.orderType === "takeaway" && (
+          <div className="col-md-3">
+            <label>Delivery Type</label>
+            <select
+              name="deliveryType"
+              value={customer.deliveryType}
+              onChange={(e) =>
+                    setCustomer({
+                      ...customer,
+                      deliveryType: e.target.value
+                    })
+                  }
+              className="form-select"
+            >
+              <option value="">Select an option</option>
+              <option value="Customer Pickup">Customer Pickup</option>
+              <option value="Delivery Service">Delivery Service</option>
+            </select>
+          </div>
+        )}
+
+        {/* Delivery Note (only for Delivery Service) */}
+            {customer.deliveryType === "Delivery Service" && (
+              <div className="mt-3">
+                <label>Delivery Address or Note</label>
+                <textarea
+                  name="deliveryNote"
+                  value={customer.deliveryNote || ""}
+                  onChange={(e) =>
+                    setCustomer({
+                      ...customer,
+                      deliveryNote: e.target.value
+                    })
+                  }
+                  rows="2"
+                  className="form-control"
+                  placeholder="Enter delivery address or instructions"
+                  required
+                ></textarea>
+              </div>
+            )}
+
         </div>
       </div>
 
-      {/* Order Summary */}
-      {cart.length > 0 && (
-        <div className="mt-4 p-3 border rounded bg-light">
-          <h4>Order Summary</h4>
-          <ul className="list-group mb-3">
-            {cart.map((item) => (
-              <li key={item._id} className="list-group-item d-flex justify-content-between align-items-center">
-                <span>{item.name}</span>
-                <div className="d-flex align-items-center">
-                  <div className="btn-group btn-group-sm me-2">
-                    <button
-                      className="btn btn-outline-secondary"
-                      onClick={() => updateQuantity(item._id, -1)}
-                    >
-                      -
-                    </button>
-                    <button className="btn btn-light disabled">
-                      {item.quantity}
-                    </button>
-                    <button
-                      className="btn btn-outline-secondary"
-                      onClick={() => updateQuantity(item._id, 1)}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => removeFromCart(item._id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <h5>Total: $
-            {cart
-              .reduce((sum, item) => sum + item.price * item.quantity, 0)
-              .toFixed(2)}
-          </h5>
-          <button
-            className="btn btn-success w-100 mt-2"
-            onClick={goToPayment}
-          >
-            Proceed to Payment
-          </button>
-        </div>
-      )}
-
-      {/* Menu List */}
-      <h4>Choose Menu Items</h4>
-      {/* Search & Category Filter */}
-      <div className="mb-4 d-flex gap-3 flex-wrap align-items-center">
-        <div style={{ width: "300px" }}>
-          <label className="form-label">Search by Name</label>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="e.g., Burger"
-            className="form-control"
-          />
-        </div>
-        <div style={{ width: "200px" }}>
-          <label className="form-label">Filter by Category</label>
-          <select
-            className="form-select"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-          >
-            <option value="">All Categories</option>
-            <option value="Main Course">Main Course</option>
-            <option value="Appetizer">Appetizer</option>
-            <option value="Dessert">Dessert</option>
-            <option value="Drink">Drink</option>
-          </select>
-        </div>
-      </div>
-      <div className="row g-3 mb-4">
-        {filteredMenus.length === 0 && <p>No menu items found.</p>}
-        {filteredMenus.map((menu) => {
-          const inStock = menu.currentQty > 0;
-          const lowStock = menu.currentQty <= menu.minimumQty;
-
-          return (
-            <div key={menu._id} className="col-md-3 mb-3">
-              <div className="card shadow-sm h-100 position-relative">
-                <img
-                  src={`https://rms-6one.onrender.com${menu.imageUrl}`}
-                  alt={menu.name}
-                  style={{ height: "280px", objectFit: "cover" }}
-                  className="card-img-top"
+      {/* Cart Summary */}
+      <div className="row g-4">
+        <div className="col-md-8">
+          {/* Search & Filter */}
+          <div className="bg-white p-3 mb-3 rounded shadow-sm">
+            <div className="row g-3">
+              <div className="col-md-8">
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                <div className="card-body d-flex flex-column">
-                  <h5>{menu.name}</h5>
-                  <p>
-                    Price: ${menu.price.toFixed(2)}<br />
-                    Stock:{" "}
-                    <span
-                      className={`badge ${
-                        lowStock
-                          ? "bg-warning text-dark"
-                          : "bg-success"
-                      }`}
-                    >
+              </div>
+
+              <div className="col-md-4">
+                <select
+                  className="form-select"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                >
+                  <option value="">All Categories</option>
+                  <option value="Main Course">Main Course</option>
+                  <option value="Drinks">Drinks</option>
+                  <option value="Dessert">Dessert</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Menu Items */}
+          <div className="row g-3">
+            {filteredMenus.map((menu) => {
+              
+              const inStock = menu.currentQty > 0;
+              const lowStock = menu.currentQty <= menu.minimumQty;
+
+              return(
+              <div key={menu._id} className="col-md-3 col-lg-3 col-xl-2">
+                <div className="card shadow-sm h-100 border-0">
+                  <img
+                    src={`http://${window.location.hostname}:5000${menu.imageUrl}`}
+                    alt={menu.name}
+                    style={{ height: "150px", objectFit: "cover" }}
+                    onError={(e) => {
+                      e.target.src = "https://via.placeholder.com/300x200?text=No+Image";
+                    }}
+                    className="card-img-top"
+                  />
+                  <div className="card-body text-center">
+                    <h6>{menu.name}</h6>
+                    <p className="m-0">${menu.price.toFixed(2)} </p>
+                    <p className="m-0">
+                      Stock:{" "}
+                    <span className={`badge ${lowStock ? "bg-warning text-dark" : "bg-success"}`}>
                       {menu.currentQty}
-                    </span>{" "}
-                    left
-                  </p>
-                  {inStock && (
+                    </span>
+                    </p>
+                    {inStock ? (
                     <button
-                      className="btn btn-primary mt-auto"
+                      className="btn btn-success w-100 mt-2"
                       onClick={() => addToCart(menu)}
                     >
                       Add to Order
                     </button>
-                  )}
-                  {!inStock && (
-                    <div className="mt-auto pt-2 text-danger">
-                      <strong>Out of Stock</strong>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="text-danger mt-auto">❌ Out of Stock</div>
+                    )}
+                  </div>
                 </div>
               </div>
+            );
+            })}
+          </div>
+        </div>
+
+        {/* Right Side - Cart & Receipt */}
+        <div className="col-md-4">
+          <div className="card shadow-sm">
+            <div className="card-header bg-success text-white">
+              <h5 className="mb-0">🛒 Current Order</h5>
             </div>
-          );
-        })}
+            <div className="card-body">
+              <ul className="list-group mb-3">
+                {cart.length === 0 ? (
+                  <li className="list-group-item">No items added</li>
+                ) : (
+                  cart.map((item, idx) => (
+                    <li key={idx} className="list-group-item d-flex justify-content-between align-items-center">
+                      <span>{item.name}</span>
+                      <span>${(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="badge bg-secondary">{item.quantity}</span>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => removeFromCart(item)}
+                      >
+                        -
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+
+              <hr />
+
+              {/* Order Summary */}
+              <div className="d-flex justify-content-between mb-2">
+                <strong>Subtotal</strong>
+                <span>{symbol}{subtotal.toFixed(2)}</span> {/* ✅ UPDATED */}
+              </div>
+
+              {serviceCharge > 0 && (
+                <div className="d-flex justify-content-between mb-2">
+                  <strong>Service Charge ({serviceChargeSettings.dineInCharge}%)</strong>
+                  <span>{symbol}{serviceCharge.toFixed(2)}</span> {/* ✅ UPDATED */}
+                </div>
+              )}
+
+              {deliveryCharge > 0 && (
+                <div className="d-flex justify-content-between mb-2">
+                  <strong>Delivery Fee</strong>
+                  <span>{symbol}{deliveryCharge.toFixed(2)}</span>
+                </div>
+              )}
+
+              <div className="d-flex justify-content-between fw-bold fs-5">
+                <strong>Total</strong>
+                <span>{symbol}{finalTotal.toFixed(2)}</span> {/* ✅ UPDATED */}
+              </div>
+
+              <button
+                className="btn btn-success w-100 py-2 mt-3"
+                onClick={goToPayment}
+                disabled={cart.length === 0}
+              >
+                Proceed to Payment
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Payment Modal */}
+      {/* Modals */}
       {showPaymentModal && (
         <PaymentModal
-          totalAmount={orderData?.totalPrice || 0}
+          totalAmount={orderData.totalPrice}
+          subtotal={orderData.subtotal}
+          serviceCharge={orderData.serviceCharge}
+          deliveryCharge={orderData.deliveryCharge}
           onConfirm={submitConfirmedOrder}
           onClose={() => setShowPaymentModal(false)}
         />
       )}
 
-      {/* Receipt Modal */}
       {receiptOrder && (
         <ReceiptModal
           order={receiptOrder}
           onClose={() => setReceiptOrder(null)}
         />
       )}
-
       <ToastContainer />
     </div>
   );

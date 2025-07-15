@@ -1,9 +1,28 @@
 const Employee = require("../models/Employee");
 
+// Helper to generate next EMP-ID
+async function generateNextId() {
+  try {
+    const lastEmp = await Employee.findOne({})
+      .sort({ _id: -1 })
+      .limit(1);
+
+    if (!lastEmp || !lastEmp.id) {
+      return "EMP-001"; // First employee
+    }
+
+    const lastNumber = parseInt(lastEmp.id.slice(4)); // Get number after EMP-
+    const nextNumber = lastNumber + 1;
+    return `EMP-${String(nextNumber).padStart(3, "0")}`;
+  } catch (err) {
+    console.error("Failed to generate ID:", err.message);
+    return "EMP-001";
+  }
+}
+
 // Register new employee
 exports.registerEmployee = async (req, res) => {
   const {
-    id,
     name,
     nic,
     address,
@@ -15,7 +34,7 @@ exports.registerEmployee = async (req, res) => {
     role
   } = req.body;
 
-  if (!id || !name || !nic || !phone || !basicSalary || !role) {
+  if (!name || !nic || !phone || !basicSalary || !role) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -25,15 +44,17 @@ exports.registerEmployee = async (req, res) => {
       return res.status(400).json({ error: "NIC already registered" });
     }
 
+    const newId = await generateNextId(); // ✅ Use helper
+
     const newEmployee = new Employee({
-      id,
+      id: newId,
       name,
       nic,
       address,
       phone,
       basicSalary,
-      workingHours,
-      otHourRate,
+      workingHours: workingHours || 8,
+      otHourRate: otHourRate || 0,
       bankAccountNo,
       role
     });
@@ -43,6 +64,25 @@ exports.registerEmployee = async (req, res) => {
   } catch (err) {
     console.error("Register failed:", err.message);
     res.status(500).json({ error: "Failed to register employee" });
+  }
+};
+
+// GET /api/auth/employees/next-id
+exports.getNextId = async (req, res) => {
+  try {
+    const lastEmp = await Employee.findOne({})
+      .sort({ _id: -1 })
+      .limit(1);
+
+    let nextNumber = 1;
+    if (lastEmp && lastEmp.employeeId) {
+      nextNumber = parseInt(lastEmp.employeeId.slice(4)) + 1;
+    }
+
+    const nextId = `EMP-${String(nextNumber).padStart(3, "0")}`;
+    res.json({ nextId });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load next ID" });
   }
 };
 
@@ -56,7 +96,7 @@ exports.getAllEmployees = async (req, res) => {
   }
 };
 
-// Get one employee
+// Get one employee by ID
 exports.getEmployeeById = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id);

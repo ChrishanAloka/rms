@@ -1,14 +1,26 @@
 const mongoose = require("mongoose");
 
 const supplierSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  contact: { type: String, required: true },
-  email: { type: String },
-  address: { type: String },
-  addedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+  name: {
+    type: String,
     required: true
+  },
+  companyName: { // ✅ New field
+    type: String,
+    required: true
+  },
+  contact: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    unique: true
+  },
+  address: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 });
 

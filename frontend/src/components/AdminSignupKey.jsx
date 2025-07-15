@@ -41,28 +41,35 @@ const AdminSignupKey = () => {
   };
 
   return (
-    <div>
-      <h2>Signup Keys</h2>
-      <button className="btn btn-primary mb-3" onClick={generateKey}>
-        Generate New Key
-      </button>
+    <div className="container my-5">
+      <h2 className="mb-4 text-center">Signup Keys</h2>
 
-      <ul className="list-group">
-        {keys.map((key) => (
-          <li
-            key={key._id}
-            className="list-group-item d-flex justify-content-between align-items-center"
-          >
-            <code>{key.key}</code>
-            <button
-              className="btn btn-sm btn-danger"
-              onClick={() => deleteKey(key._id)}
+      <div className="d-flex justify-content-center mb-4">
+        <button className="btn btn-primary" onClick={generateKey}>
+          Generate New Key
+        </button>
+      </div>
+
+      {keys.length === 0 ? (
+        <p className="text-center text-muted">No signup keys found.</p>
+      ) : (
+        <ul className="list-group shadow rounded">
+          {keys.map((key) => (
+            <li
+              key={key._id}
+              className="list-group-item d-flex justify-content-between align-items-center"
             >
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
+              <code className="text-break">{key.key}</code>
+              <button
+                className="btn btn-sm btn-danger"
+                onClick={() => deleteKey(key._id)}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 };

@@ -13,6 +13,8 @@ const { getMonthlyReport } = require("../controllers/reportController");
 
 const { getBills, addBill, updateBill, deleteBill } = require("../controllers/kitchenBillController");
 
+const authController = require("../controllers/authController");
+
 const forgotPasswordController = require("../controllers/forgotPasswordController");
 
 const employeeController = require("../controllers/employeeController");
@@ -29,6 +31,13 @@ const kitchenRequestController = require("../controllers/kitchenRequestControlle
 
 const adminController = require("../controllers/adminController");
 
+const notificationController = require("../controllers/notificationController");
+
+const serviceChargeController = require("../controllers/serviceChargeController");
+
+const deliveryChargeController = require("../controllers/deliveryChargeController");
+
+const driverController = require("../controllers/driverController");
 
 // Public routes
 router.post("/signup", signup);
@@ -70,15 +79,23 @@ router.get("/customer", authMiddleware(["cashier"]), getCustomerByPhone);
 
 router.put("/order/:id/status", authMiddleware(["kitchen", "admin"]), updateOrderStatus);
 
+router.get("/admin/service-charge", authMiddleware(["admin", "cashier"]), serviceChargeController.getServiceCharge);
+router.put("/admin/service-charge", authMiddleware(["admin"]), serviceChargeController.updateServiceCharge);
+
+router.get("/admin/delivery-charge", authMiddleware(["admin", "cashier"]), deliveryChargeController.getDeliveryCharge);
+router.put("/admin/delivery-charge", authMiddleware(["admin"]), deliveryChargeController.updateDeliveryCharge);
+router.get("/cashier/takeaway-orders", authMiddleware(["admin", "cashier"]), orderController.getCashierTakeawayOrders);
+
+router.get("/drivers", authMiddleware(["admin", "cashier"]), orderController.getDrivers);
+// Update delivery status only for Delivery Service orders
+router.put("/order/:id/delivery-status", authMiddleware(["admin", "cashier"]), orderController.updateDeliveryStatus);
+
 // GET /kitchen/bills → list all
 router.get("/kitchen/bills", authMiddleware(["admin", "kitchen"]), getBills);
-
 // POST /kitchen/bill → add new
 router.post("/kitchen/bill", authMiddleware(["admin", "kitchen"]), addBill);
-
 // PUT /kitchen/bill/:id → update existing
 router.put("/kitchen/bill/:id", authMiddleware(["admin", "kitchen"]), updateBill);
-
 // DELETE /kitchen/bill/:id → remove
 router.delete("/kitchen/bill/:id", authMiddleware(["admin", "kitchen"]), deleteBill);
 
@@ -95,17 +112,16 @@ router.get("/report/monthly", authMiddleware(["kitchen", "admin"]), getMonthlyRe
 router.post("/forgot-password", forgotPasswordController.forgotPassword);
 router.post("/reset-password/:token", forgotPasswordController.resetPassword);
 
+router.post("/verify-reset-key", authController.verifyResetKey);
+router.post("/reset-password", authController.resetPassword);
+
 // Register & view employees
 router.post("/employee/register", authMiddleware(["admin"]), employeeController.registerEmployee);
-router.get("/employees", authMiddleware(["admin"]), employeeController.getAllEmployees);
+router.get("/employees", authMiddleware(["admin", "cashier", "kitchen"]), employeeController.getAllEmployees);
 router.get("/employee/:id", authMiddleware(["admin"]), employeeController.getEmployeeById);
 router.put("/employee/:id", authMiddleware(["admin"]), employeeController.updateEmployee);
 router.delete("/employee/:id", authMiddleware(["admin"]), employeeController.deleteEmployee);
-
-// Attendance Routes
-router.post("/attendance/add", authMiddleware(["admin"]), attendanceController.addAttendance);
-router.get("/attendance/list", authMiddleware(["admin"]), attendanceController.getAllEmployeesWithAttendance);
-router.get("/attendance/by-employee", authMiddleware(["admin"]), attendanceController.getAttendanceByEmployee);
+router.get("/employees/next-id", authMiddleware(["admin"]), employeeController.getNextId);
 
 // Currency Settings
 router.get("/settings/currency", authMiddleware(["admin"]), currencyController.getCurrency);
@@ -120,13 +136,30 @@ router.get("/suppliers", authMiddleware(["admin"]), supplierController.getAllSup
 // Expenses
 router.post("/expense/add", authMiddleware(["admin"]), expenseController.addExpense);
 router.get("/expenses", authMiddleware(["admin"]), expenseController.getAllExpenses);
+router.put("/expense/:id", authMiddleware(["admin", "cashier"]), expenseController.updateExpense);
+router.delete("/expense/:id", authMiddleware(["admin", "cashier"]), expenseController.deleteExpense);
 
 // Salaries
 router.post("/salary/add", authMiddleware(["admin"]), salaryController.addSalary);
 router.get("/salaries", authMiddleware(["admin"]), salaryController.getAllSalaries);
 
-router.get("/admin/summary", authMiddleware(["admin"]), adminController.getDashboardSummary);
+router.get("/admin/summary", authMiddleware(["admin"]), adminController.getAdminSummary);
+router.get("/admin/trend/monthly", authMiddleware(["admin"]), adminController.getMonthlyTrend);
+router.get("/admin/expenses", authMiddleware(["admin"]), adminController.getExpenseSummary);
 
+// Attendance Routes
+router.post("/attendance/punch", authMiddleware(["admin", "cashier", "kitchen"]), attendanceController.recordPunch);
+router.get("/attendance/summary", authMiddleware(["admin", "cashier", "kitchen"]), attendanceController.getSummary);
+router.get("/admin/attendance/monthly-summary", authMiddleware(["admin"]), attendanceController.getMonthlySummary);
 
+router.get("/notifications", authMiddleware(["admin", "cashier", "kitchen"]), notificationController.getNotifications);
+router.post("/notifications/send", authMiddleware(["admin", "cashier", "kitchen"]), notificationController.sendNotification);
+router.post("/notifications/mark-read", authMiddleware(["admin", "cashier", "kitchen"]), notificationController.markAsRead);
+router.post("/notifications/mark-all-read", authMiddleware(["admin", "cashier", "kitchen"]), notificationController.markAllAsRead);
+
+router.get("/drivers", authMiddleware(["admin", "cashier"]), driverController.getDrivers);
+router.post("/drivers", authMiddleware(["admin", "cashier"]), driverController.registerDriver);
+router.put("/drivers/:id", authMiddleware(["admin", "cashier"]), driverController.updateDriver);
+router.delete("/drivers/:id", authMiddleware(["admin", "cashier"]), driverController.deleteDriver);
 
 module.exports = router;

@@ -58,6 +58,11 @@ import SalaryPage from "./components/SalaryPage";
 import AdminKitchenRequests from "./components/AdminKitchenRequests";
 import KitchenRequestForm from "./components/KitchenRequestForm";
 
+import AdminServiceCharge from "./components/AdminServiceCharge";
+import AdminDeliveryCharge from "./components/AdminDeliveryCharge";
+import TakeawayOrdersPage from "./components/TakeawayOrdersPage";
+import RegisterDriverPage from "./components/RegisterDriverPage";
+
 
 <Route path="/unauthorized" element={<Unauthorized />} />
 
@@ -99,6 +104,8 @@ function App() {
 
         <Route path="/admin/currency" element={<CurrencySettings />} />
         <Route path="/admin/kitchen-requests" element={<AdminKitchenRequests />} />
+        <Route path="/admin/service-charge" element={<AdminServiceCharge />} />
+        <Route path="/admin/delivery-charge" element={<AdminDeliveryCharge />} />
       </Route>
       
       <Route
@@ -110,17 +117,8 @@ function App() {
       >
         <Route path="/kitchen" element={<KitchenLanding />} />
         <Route path="/kitchen/history" element={<KitchenOrderHistory />} />
-         <Route path="/kitchen/kitchen-requestsForm" element={<KitchenRequestForm />} />
-      </Route>
-
-      <Route
-        element={
-          <ProtectedRoute allowedRoles={["cashier"]}>
-            <RoleLayout /> 
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/cashier" element={<CashierLanding />} />
+        <Route path="/kitchen/kitchen-requestsForm" element={<KitchenRequestForm />} />
+        <Route path="/kitchen/attendance/add" element={<AddAttendance />} />
       </Route>
 
       <Route
@@ -151,10 +149,14 @@ function App() {
           </ProtectedRoute>
         }
       >
-        
+        <Route path="/cashier" element={<CashierLanding />} />
         <Route path="/cashier/orders" element={<CashierOrderHistory />} />
         <Route path="/cashier/today" element={<CashierDashboard />} />
+        <Route path="/cashier/takeaway-orders" element={<TakeawayOrdersPage />} />
+        <Route path="/cashier/driver-register" element={<RegisterDriverPage />} />
+        <Route path="/cashier/attendance/add" element={<AddAttendance />} />
       </Route>
+      
     </Routes>
   );
 }

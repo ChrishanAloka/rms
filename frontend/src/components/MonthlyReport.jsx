@@ -1,4 +1,3 @@
-// src/components/MonthlyReport.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Bar } from "react-chartjs-2";
@@ -11,15 +10,10 @@ import {
   Tooltip,
   Legend
 } from "chart.js";
+import { FaMoneyBillWave, FaTruckLoading, FaFileInvoiceDollar, FaUserTie, FaChartPie, FaBalanceScale } from "react-icons/fa";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
 
 const MonthlyReport = () => {
   const [reportData, setReportData] = useState(null);
@@ -27,13 +21,15 @@ const MonthlyReport = () => {
   const [month, setMonth] = useState(new Date().getMonth());
   const [year, setYear] = useState(new Date().getFullYear());
 
+  const symbol = localStorage.getItem("currencySymbol") || "$";
+
   // Load report data based on selected month/year
   useEffect(() => {
     const fetchReport = async () => {
       const token = localStorage.getItem("token");
       try {
         const res = await axios.get(
-          `https://rms-6one.onrender.com/api/auth/report/monthly?month=${parseInt(month)}&year=${parseInt(year)}`,
+          `https://rms-6one.onrender.com/api/auth/report/monthly?month=${parseInt(month) + 1}&year=${parseInt(year)}`,
           {
             headers: { Authorization: `Bearer ${token}` }
           }
@@ -41,7 +37,7 @@ const MonthlyReport = () => {
         setReportData(res.data);
         setLoading(false);
       } catch (err) {
-        console.error("Failed to load report:", err.message);
+        console.error("Failed to load report:", err.response?.data || err.message);
         alert("Failed to load monthly report");
         setLoading(false);
       }
@@ -51,43 +47,73 @@ const MonthlyReport = () => {
   }, [month, year]);
 
   if (loading) return <div>Loading report...</div>;
-  if (!reportData || !reportData.monthlyIncome || !reportData.monthlyExpenses)
+  if (
+    !reportData ||
+    !reportData.monthlyIncome ||
+    !reportData.monthlySupplierExpenses ||
+    !reportData.monthlyBills ||
+    !reportData.monthlySalaries
+  )
     return <div>No data found</div>;
 
-  // Generate chart labels and data
+  // Generate dates for chart/table
   const getDatesInMonth = (year, month) => {
-    const numDays = new Date(year, month + 1, 0).getDate(); // Get total days
+    const numDays = new Date(year, month, 0).getDate();
     const dates = [];
 
     for (let i = 1; i <= numDays; i++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
+      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
       dates.push(dateStr);
     }
 
     return dates;
   };
 
-  const allDates = getDatesInMonth(year, month); // ✅ All dates in selected month
+  const allDates = getDatesInMonth(year, parseInt(month) + 1);
 
   const incomeData = allDates.map(date => reportData.monthlyIncome[date] || 0);
-  const expenseData = allDates.map(date => reportData.monthlyExpenses[date] || 0);
+  const supplierExpenseData = allDates.map(date => reportData.monthlySupplierExpenses[date] || 0);
+  const billData = allDates.map(date => reportData.monthlyBills[date] || 0);
+  const salaryData = allDates.map(date => reportData.monthlySalaries[date] || 0);
+
+  const totalSupplierExpenses = supplierExpenseData.reduce((a, b) => a + b, 0);
+  const totalBills = billData.reduce((a, b) => a + b, 0);
+  const totalSalaries = salaryData.reduce((a, b) => a + b, 0);
+
+  const totalExpenses = totalSupplierExpenses + totalBills + totalSalaries;
+  const totalIncome = incomeData.reduce((a, b) => a + b, 0);
+  const netProfit = totalIncome - totalExpenses;
 
   const chartData = {
-    labels: allDates.map(date => date.split("-")[2]), // Only show day of the month
+    labels: allDates.map(date => date.split("-")[2]),
     datasets: [
       {
-        label: "Income ($)",
+        label: `Income (${symbol})`,
         backgroundColor: "rgba(75,192,192,0.6)",
         borderColor: "rgba(75,192,192,1)",
         borderWidth: 1,
         data: incomeData
       },
       {
-        label: "Expenses ($)",
+        label: "Suppliers",
         backgroundColor: "rgba(255,99,132,0.6)",
         borderColor: "rgba(255,99,132,1)",
         borderWidth: 1,
-        data: expenseData
+        data: supplierExpenseData
+      },
+      {
+        label: "Kitchen Bills",
+        backgroundColor: "rgba(255,206,86,0.6)",
+        borderColor: "rgba(255,206,86,1)",
+        borderWidth: 1,
+        data: billData
+      },
+      {
+        label: "Salaries",
+        backgroundColor: "rgba(54,162,235,0.6)",
+        borderColor: "rgba(54,162,235,1)",
+        borderWidth: 1,
+        data: salaryData
       }
     ]
   };
@@ -103,23 +129,22 @@ const MonthlyReport = () => {
     }
   };
 
-  // Calculate totals
-  const totalIncome = incomeData.reduce((a, b) => a + b, 0);
-  const totalExpenses = expenseData.reduce((a, b) => a + b, 0);
-  const netProfit = totalIncome - totalExpenses;
+  
 
   return (
-    <div>
-      <h2>Monthly Income vs. Expenses</h2>
+    <div className="container my-4">
+      <h2 className="text-primary mb-4 fw-bold border-bottom pb-2">
+        Monthly Income & Expense Report
+      </h2>
 
       {/* Month/Year Picker */}
-      <div className="mb-4 d-flex gap-3 align-items-end">
+      <div className="mb-4 d-flex flex-wrap gap-4 align-items-end">
         <div>
-          <label className="form-label">Select Month</label>
+          <label className="form-label fw-semibold">Select Month</label>
           <select
             value={month}
             onChange={(e) => setMonth(parseInt(e.target.value))}
-            className="form-select"
+            className="form-select shadow-sm"
           >
             {[...Array(12)].map((_, i) => (
               <option key={i} value={i}>
@@ -128,13 +153,14 @@ const MonthlyReport = () => {
             ))}
           </select>
         </div>
+
         <div>
-          <label className="form-label">Select Year</label>
+          <label className="form-label fw-semibold">Select Year</label>
           <input
             type="number"
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value))}
-            className="form-control"
+            className="form-control shadow-sm"
             min="2020"
             max="2030"
           />
@@ -142,39 +168,138 @@ const MonthlyReport = () => {
       </div>
 
       {/* Chart */}
-      <div style={{ width: "100%", maxWidth: "900px", margin: "auto" }}>
+      <div className="mb-5 p-3 border rounded bg-white shadow-sm">
         <Bar data={chartData} options={options} />
       </div>
 
       {/* Summary Stats */}
-      <div className="mt-4 p-3 bg-white border rounded shadow-sm">
-        <h5>Summary for {new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' })}</h5>
-        <p><strong>Total Income:</strong> ${totalIncome.toFixed(2)}</p>
-        <p><strong>Total Expenses:</strong> ${totalExpenses.toFixed(2)}</p>
-        <p><strong>Net Profit:</strong> ${netProfit.toFixed(2)}</p>
+
+<div className="summary-stats my-5">
+  <h4 className="mb-4">📊 Summary - {new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' })}</h4>
+
+  <div className="row g-4">
+    {/* Total Income */}
+    <div className="col-md-4">
+      <div className="p-4 rounded shadow-sm border-start border-success border-5 bg-light">
+        <div className="d-flex align-items-center">
+          <FaMoneyBillWave size={30} className="text-success me-3" />
+          <div>
+            <small className="text-muted">Total Income</small>
+            <h5 className="mb-0 text-success">{symbol}{totalIncome.toFixed(2)}</h5>
+          </div>
+        </div>
       </div>
+    </div>
+
+    {/* Total Expenses */}
+    <div className="col-md-4">
+      <div className="p-4 rounded shadow-sm border-start border-danger border-5 bg-light">
+        <div className="d-flex align-items-center">
+          <FaChartPie size={30} className="text-danger me-3" />
+          <div>
+            <small className="text-muted">Total Expenses</small>
+            <h5 className="mb-0 text-danger">{symbol}{totalExpenses.toFixed(2)}</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Net Profit */}
+    <div className="col-md-4">
+      <div className={`p-4 rounded shadow-sm border-start border-5 bg-light ${netProfit >= 0 ? 'border-info' : 'border-danger'}`}>
+        <div className="d-flex align-items-center">
+          <FaBalanceScale size={30} className={`${netProfit >= 0 ? 'text-info' : 'text-danger'} me-3`} />
+          <div>
+            <small className="text-muted">Net Profit</small>
+            <h5 className={`mb-0 ${netProfit >= 0 ? 'text-info' : 'text-danger'}`}>
+              {symbol}{netProfit.toFixed(2)}
+            </h5>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Supplier Expenses */}
+    <div className="col-md-4">
+      <div className="p-4 rounded shadow-sm border-start border-dark border-5 bg-light">
+        <div className="d-flex align-items-center">
+          <FaTruckLoading size={30} className="text-dark me-3" />
+          <div>
+            <small className="text-muted">Supplier Expenses</small>
+            <h5 className="mb-0 text-dark">{symbol}{totalSupplierExpenses.toFixed(2)}</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Utility Bills */}
+    <div className="col-md-4">
+      <div className="p-4 rounded shadow-sm border-start border-warning border-5 bg-light">
+        <div className="d-flex align-items-center">
+          <FaFileInvoiceDollar size={30} className="text-warning me-3" />
+          <div>
+            <small className="text-muted">Kitchen Bills</small>
+            <h5 className="mb-0 text-warning">{symbol}{totalBills.toFixed(2)}</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Salaries */}
+    <div className="col-md-4">
+      <div className="p-4 rounded shadow-sm border-start border-primary border-5 bg-light">
+        <div className="d-flex align-items-center">
+          <FaUserTie size={30} className="text-primary me-3" />
+          <div>
+            <small className="text-muted">Salaries</small>
+            <h5 className="mb-0 text-primary">{symbol}{totalSalaries.toFixed(2)}</h5>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 
       {/* Daily Breakdown Table */}
-      <div className="mt-4">
-        <h4>Daily Breakdown</h4>
-        <table className="table table-bordered table-hover">
-          <thead>
+      <h4 className="mt-4 mb-3">📅 Daily Breakdown</h4>
+      <div className="table-responsive shadow-sm border rounded">
+        <table className="table table-bordered table-hover align-middle mb-0">
+          <thead className="table-light">
             <tr>
               <th>Date</th>
-              <th>Income ($)</th>
-              <th>Expense ($)</th>
-              <th>Net ($)</th>
+              <th>Income ({symbol})</th>
+              <th>Suppliers ({symbol})</th>
+              <th>Bills ({symbol})</th>
+              <th>Salaries ({symbol})</th>
+              <th>Total Exp ({symbol})</th>
+              <th>Net ({symbol})</th>
             </tr>
           </thead>
           <tbody>
-            {allDates.map((date, idx) => (
-              <tr key={idx}>
-                <td>{date}</td>
-                <td>${incomeData[idx].toFixed(2)}</td>
-                <td>${expenseData[idx].toFixed(2)}</td>
-                <td>${(incomeData[idx] - expenseData[idx]).toFixed(2)}</td>
-              </tr>
-            ))}
+            {allDates.map((date, idx) => {
+              const income = incomeData[idx].toFixed(2);
+              const supplier = supplierExpenseData[idx].toFixed(2);
+              const bill = billData[idx].toFixed(2);
+              const salary = salaryData[idx].toFixed(2);
+              const total = (parseFloat(supplier) + parseFloat(bill) + parseFloat(salary)).toFixed(2);
+              const net = (incomeData[idx] - total).toFixed(2);
+
+              return (
+                <tr key={idx}>
+                  <td>{date}</td>
+                  <td>{symbol}{income}</td>
+                  <td>{symbol}{supplier}</td>
+                  <td>{symbol}{bill}</td>
+                  <td>{symbol}{salary}</td>
+                  <td>{symbol}{total}</td>
+                  <td className={net >= 0 ? "text-success" : "text-danger"}>
+                    {symbol}{net}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

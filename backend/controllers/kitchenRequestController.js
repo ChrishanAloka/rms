@@ -3,7 +3,7 @@ const User = require("../models/User");
 
 // Submit a new request
 exports.submitRequest = async (req, res) => {
-  const { item, quantity, reason } = req.body;
+  const { item, quantity, unit, reason } = req.body;
 
   if (!item || !quantity) {
     return res.status(400).json({ error: "Item and quantity are required" });
@@ -14,6 +14,7 @@ exports.submitRequest = async (req, res) => {
       requestedBy: req.user.id,
       item,
       quantity,
+      unit,
       reason,
       status: "Pending"
     });
@@ -29,7 +30,7 @@ exports.submitRequest = async (req, res) => {
 // Get all requests (admin only)
 exports.getAllRequests = async (req, res) => {
   try {
-    const requests = await KitchenRequest.find({}).populate("requestedBy", "name role");
+    const requests = await KitchenRequest.find({status: "Pending"}).populate("requestedBy", "name role").sort({ date: -1 });
     res.json(requests);
   } catch (err) {
     res.status(500).json({ error: "Failed to load requests" });
@@ -57,7 +58,7 @@ exports.updateRequestStatus = async (req, res) => {
 // Get all requests by current user
 exports.getMyRequests = async (req, res) => {
   try {
-    const requests = await KitchenRequest.find({ requestedBy: req.user.id });
+    const requests = await KitchenRequest.find({ requestedBy: req.user.id }).sort({ date: -1 });
     res.json(requests);
   } catch (err) {
     res.status(500).json({ error: "Failed to load your requests" });

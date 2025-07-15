@@ -1,8 +1,44 @@
 // backend/controllers/authController.js
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const SignupKey = require("../models/SignupKey");
 
+// STEP 1: Verify Reset Key
+exports.verifyResetKey = async (req, res) => {
+  const { key } = req.body;
+  try {
+    const validKey = await SignupKey.findOne({ key });
+    if (!validKey) return res.status(400).json({ message: "Invalid or expired key" });
+
+    res.status(200).json({ message: "Key is valid" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// STEP 2: Reset Password
+exports.resetPassword = async (req, res) => {
+  const { email, key, newPassword } = req.body;
+
+  try {
+    const validKey = await SignupKey.findOne({ key });
+    if (!validKey) return res.status(400).json({ message: "Invalid or expired key" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.password = newPassword;
+    await user.save();
+
+    // Remove the used key
+    await SignupKey.deleteOne({ key });
+
+    res.status(200).json({ message: "Password has been reset" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
 
 // controllers/authController.js
 exports.signup = async (req, res) => {

@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const KitchenRequestForm = () => {
   const [formData, setFormData] = useState({
     item: "",
     quantity: "",
+    unit: "",
     reason: ""
   });
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load user's own requests
   useEffect(() => {
     const fetchMyRequests = async () => {
       try {
@@ -38,6 +40,11 @@ const KitchenRequestForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!formData.item || !formData.quantity || !formData.unit) {
+      toast.warn("Please fill all required fields.");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const res = await axios.post(
@@ -49,105 +56,138 @@ const KitchenRequestForm = () => {
       );
 
       setRequests([res.data, ...requests]);
-      setFormData({ item: "", quantity: "", reason: "" });
-      alert("Request submitted successfully!");
+      toast.success("Request submitted successfully!");
+      setFormData({ item: "", quantity: "", unit: "", reason: "" });
     } catch (err) {
-      alert("Failed to submit request");
+      console.error("Failed to submit request:", err.message);
+      toast.error("Failed to submit request");
     }
   };
 
   return (
-    <div>
-      <h2>Request Kitchen Supplies</h2>
+    <div className="container py-4">
+      <h2 className="text-primary mb-4 border-bottom pb-2">
+         Request Kitchen Supplies
+      </h2>
+      <ToastContainer />
 
-      {/* Submit New Request */}
-      <form onSubmit={handleSubmit} className="mt-3 mb-4 p-3 bg-light border rounded">
-        <div className="row g-3">
+      {/* Form */}
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-4 shadow-sm border rounded mb-5"
+      >
+        <div className="row g-4">
           <div className="col-md-6">
-            <label className="form-label">Item *</label>
+            <label className="form-label fw-semibold">Item *</label>
             <input
               type="text"
               name="item"
               value={formData.item}
               onChange={handleChange}
-              placeholder="e.g., Spices, Oil"
-              className="form-control"
+              className="form-control shadow-sm"
+              placeholder="e.g., Rice, Oil"
               required
             />
           </div>
-          <div className="col-md-6">
-            <label className="form-label">Quantity *</label>
+
+          <div className="col-md-3">
+            <label className="form-label fw-semibold">Quantity *</label>
             <input
               type="number"
               name="quantity"
               value={formData.quantity}
               onChange={handleChange}
+              className="form-control shadow-sm"
               min="1"
-              placeholder="e.g., 5 kg"
-              className="form-control"
+              placeholder="e.g., 10"
               required
             />
           </div>
+
+          <div className="col-md-3">
+            <label className="form-label fw-semibold">Unit *</label>
+            <select
+              name="unit"
+              value={formData.unit}
+              onChange={handleChange}
+              className="form-select shadow-sm"
+              required
+            >
+              <option value="">-- Select --</option>
+              <option value="kg">Kilograms (kg)</option>
+              <option value="liters">Liters</option>
+              <option value="pcs">Pieces</option>
+              <option value="grams">Grams</option>
+              <option value="ml">Milliliters</option>
+              <option value="packs">Packs</option>
+            </select>
+          </div>
+
           <div className="col-md-12">
-            <label className="form-label">Reason (Optional)</label>
+            <label className="form-label fw-semibold">Reason (Optional)</label>
             <textarea
               name="reason"
               value={formData.reason}
               onChange={handleChange}
               rows="2"
-              className="form-control"
-              placeholder="Why do you need this?"
-            ></textarea>
+              className="form-control shadow-sm"
+              placeholder="Describe the reason for this request"
+            />
           </div>
-          <div className="col-12 mt-3">
-            <button type="submit" className="btn btn-success w-100">
-              Submit Request
+
+          <div className="col-12 pt-2">
+            <button type="submit" className="btn btn-success w-100 py-2 fs-5">
+              ✅ Submit Request
             </button>
           </div>
         </div>
       </form>
 
-      {/* Past Requests Table */}
-      <h4>Your Recent Requests</h4>
-      {loading && <p>Loading...</p>}
-      {!loading && requests.length === 0 && (
-        <p className="text-muted">No requests found.</p>
-      )}
+      {/* Requests Table */}
+      <h4 className="text-secondary mb-3">📋 Your Recent Requests</h4>
 
-      <table className="table table-bordered">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Item</th>
-            <th>Qty</th>
-            <th>Status</th>
-            <th>Admin Comment</th>
-          </tr>
-        </thead>
-        <tbody>
-          {requests.map((req, idx) => (
-            <tr key={idx}>
-              <td>{new Date(req.date).toLocaleDateString()}</td>
-              <td>{req.item}</td>
-              <td>{req.quantity}</td>
-              <td>
-                <span
-                  className={`badge ${
-                    req.status === "Approved"
-                      ? "bg-success"
-                      : req.status === "Rejected"
-                      ? "bg-danger text-white"
-                      : "bg-warning text-dark"
-                  }`}
-                >
-                  {req.status}
-                </span>
-              </td>
-              <td>{req.adminComment || "-"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {loading ? (
+        <p className="text-info">Loading...</p>
+      ) : requests.length === 0 ? (
+        <p className="text-muted">No requests found.</p>
+      ) : (
+        <div className="table-responsive shadow-sm rounded border">
+          <table className="table table-hover table-bordered align-middle mb-0">
+            <thead className="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map((req, idx) => (
+                <tr key={idx}>
+                  <td>{new Date(req.date).toLocaleDateString()}</td>
+                  <td>{req.item}</td>
+                  <td>
+                    {req.quantity} {req.unit}
+                  </td>
+                  <td>
+                    <span
+                      className={`badge rounded-pill px-3 py-2 ${
+                        req.status === "Approved"
+                          ? "bg-success"
+                          : req.status === "Rejected"
+                          ? "bg-danger"
+                          : "bg-warning text-dark"
+                      }`}
+                    >
+                      {req.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

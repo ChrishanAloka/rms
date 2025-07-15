@@ -1,96 +1,101 @@
-import React, { useState } from "react";
-import { Outlet, Link } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import { useAuth } from "./ProtectedRoute";
 import useTokenCountdown from "../hooks/useTokenCountdown";
+import {
+  FaBars, FaSignOutAlt, FaTachometerAlt, FaUsers, FaKey, FaFileInvoice,
+  FaChartBar, FaUserTie, FaCalendarCheck, FaTruck, FaMoneyBillWave,
+  FaMoneyCheckAlt, FaUtensils, FaDollarSign, FaShoppingCart, FaHistory,
+  FaBookOpen, FaClipboardList, FaUserCircle, FaPercentage, FaTruckLoading, 
+  FaFirstOrder,FaMotorcycle,FaUserClock
+} from "react-icons/fa";
+import "./Sidebar.css";
+import NotificationCenter from "./NotificationCenter";
 
 const RoleLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-
-  // Get user role from AuthContext
+  const [userDropdown, setUserDropdown] = useState(false);
   const { user, logout } = useAuth();
-
   const countdown = useTokenCountdown();
+  const location = useLocation();
+  const dropdownRef = useRef();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Auto detect mobile view
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Close dropdown if clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setUserDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const createMenuItem = (to, label, Icon) => {
+    const isActive = location.pathname === to;
+    return (
+      <li title={!sidebarOpen ? label : ""} key={to}>
+        <Link to={to} className={`menu-link ${isActive ? "active" : ""}`}>
+          <Icon className="menu-icon" />
+          {sidebarOpen && <span className="menu-label">{label}</span>}
+        </Link>
+      </li>
+    );
+  };
 
   const renderSidebarMenu = () => {
     switch (user?.role) {
       case "admin":
         return (
           <>
-            <li className="nav-item mb-2">
-              <Link to="/admin" className="nav-link text-white">Dashboard</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/users" className="nav-link text-white">User Management</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/signup-key" className="nav-link text-white">Generate Signup Key</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/bills" className="nav-link text-white">Bills</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/report" className="nav-link text-white">Reports</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/employees" className="nav-link text-white">Employees</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/attendance" className="nav-link text-white">Attendence</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/suppliers" className="nav-link text-white">Suppliers
-              </Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/expenses" className="nav-link text-white">Expenses
-              </Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/salaries" className="nav-link text-white">Salary Payments
-              </Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/admin/kitchen-requests" className="nav-link text-white">Kitchen Requests
-              </Link>
-            </li>
-                
-            <li className="nav-item mb-2">
-              <Link to="/admin/currency" className="nav-link text-white">Currency</Link>
-            </li>
+            {createMenuItem("/admin", "Dashboard", FaTachometerAlt)}
+            {createMenuItem("/admin/users", "User Management", FaUsers)}
+            {createMenuItem("/admin/kitchen-requests", "Kitchen Requests", FaUtensils)}
+            {createMenuItem("/admin/report", "Reports", FaChartBar)}
+            {createMenuItem("/admin/employees", "Employees", FaUserTie)}
+            {createMenuItem("/admin/attendance", "Attendance", FaCalendarCheck)}
+            {createMenuItem("/admin/suppliers", "Suppliers", FaTruck)}
+            {createMenuItem("/admin/expenses", "Expenses", FaMoneyBillWave)}
+            {createMenuItem("/admin/bills", "Bills", FaFileInvoice)}            
+            {createMenuItem("/admin/salaries", "Salary Payments", FaMoneyCheckAlt)}
+            {createMenuItem("/admin/service-charge", "Service Charge", FaPercentage)}
+            {createMenuItem("/admin/delivery-charge", "Delivery Charge", FaTruckLoading)}
+            {createMenuItem("/admin/signup-key", "Signup Key", FaKey)}
+            {createMenuItem("/admin/currency", "Currency", FaDollarSign)}
           </>
         );
       case "cashier":
         return (
           <>
-            <li className="nav-item mb-2">
-              <Link to="/cashier" className="nav-link text-white">Sales Dashboard</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/cashier/orders" className="nav-link text-white">Order History</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/cashier/today" className="nav-link text-white">View Today</Link>
-            </li>
+            {createMenuItem("/cashier", "Sales Dashboard", FaTachometerAlt)}
+            {createMenuItem("/cashier/orders", "Order History", FaHistory)}
+            {createMenuItem("/cashier/today", "View Today", FaBookOpen)}
+            {createMenuItem("/cashier/takeaway-orders", "Takeaway Orders", FaFirstOrder)}
+            {createMenuItem("/cashier/driver-register", "Driver Register", FaMotorcycle)}
+            {createMenuItem("/cashier/attendance/add", "Attendance", FaUserClock)}
+            
           </>
         );
       case "kitchen":
         return (
           <>
-            <li className="nav-item mb-2">
-              <Link to="/kitchen" className="nav-link text-white">Live Orders</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/kitchen/history" className="nav-link text-white">Order History</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/kitchen/menu" className="nav-link text-white">Manage Menu</Link>
-            </li>
-            <li className="nav-item mb-2">
-              <Link to="/kitchen/kitchen-requestsForm" className="nav-link text-white">Admin Requests 
-              </Link>
-            </li>
-            
-            
+            {createMenuItem("/kitchen", "Live Orders", FaShoppingCart)}
+            {createMenuItem("/kitchen/history", "Order History", FaHistory)}
+            {createMenuItem("/kitchen/menu", "Manage Menu", FaClipboardList)}
+            {createMenuItem("/kitchen/kitchen-requestsForm", "Admin Requests", FaUtensils)}
+            {createMenuItem("/kitchen/attendance/add", "Attendance", FaUserClock)}
           </>
         );
       default:
@@ -99,45 +104,52 @@ const RoleLayout = () => {
   };
 
   return (
-    <div className="d-flex vh-100">
-      {/* Sidebar */}
-      <div
-        className={`bg-dark text-white p-3 ${sidebarOpen ? "d-block" : "d-none"}`}
-        style={{ width: "250px", height: "100vh" }}
-      >
-        <h4 className="mb-4">RMS Panel</h4>
-        <ul className="nav flex-column">
-          {renderSidebarMenu()}
-        </ul>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-grow-1 d-flex flex-column">
-        {/* Top Navbar */}
-        <nav className="navbar navbar-light bg-light shadow-sm">
-          <div className="container-fluid">
-            <button
-              className="btn btn-outline-secondary me-3"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-            >
-              ☰
-            </button>
-            <small className="text-muted ms-3">| ⏳ Session expires in: {countdown}</small>
-            <span className="navbar-text ms-auto">
-              👤 {user?.role}
-              <button
-                className="btn btn-danger btn-sm ms-3"
-                onClick={logout}
-              >
-                Logout
-              </button>
-            </span>
+    <div className="layout d-flex">
+      {!isMobile || sidebarOpen ? (
+        <aside className={`sidebar ${sidebarOpen ? "open" : "collapsed"}`}>
+          <div className="sidebar-header">
+            {sidebarOpen && <h3 className="sidebar-title">RMS Panel</h3>}
+            
           </div>
-        </nav>
+          <ul className="sidebar-menu">{renderSidebarMenu()}</ul>
+        </aside>
+      ) : null}
 
-        {/* Page Content */}
-        <main className="p-4 overflow-auto flex-grow-1 bg-light">
-          <Outlet /> {/* Renders child routes dynamically */}
+      <div className="main-content flex-grow-1">
+        <header className="top-navbar">
+          <div className="navbar-left">
+            <button className="btn-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              <FaBars />
+            </button>
+            <span className="session-timer">⏳ Session expires in: {countdown}</span>
+            <div >
+              <NotificationCenter />
+            </div>
+          </div>
+          <div className="navbar-right" ref={dropdownRef}>
+            <div className="user-dropdown">
+              
+              <div
+                className="user-toggle"
+                onClick={() => setUserDropdown(!userDropdown)}
+                style={{ cursor: "pointer" }}
+              >
+                <FaUserCircle className="user-icon" />
+                <span className="user-role">{user?.role}</span>
+              </div>
+              {userDropdown && (
+                <div className="dropdown-menu show">
+                  <button className="dropdown-item" onClick={logout}>
+                    <FaSignOutAlt /> Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="page-content">
+          <Outlet />
         </main>
       </div>
     </div>

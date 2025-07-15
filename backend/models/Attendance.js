@@ -1,4 +1,3 @@
-// backend/models/Attendance.js
 const mongoose = require("mongoose");
 
 const attendanceSchema = new mongoose.Schema({
@@ -9,28 +8,21 @@ const attendanceSchema = new mongoose.Schema({
   },
   date: {
     type: Date,
-    required: true
+    default: Date.now
   },
-  inTime: {
-    type: String, // Format: "HH:mm"
-    required: true
-  },
-  breakStart: {
-    type: String, // Optional
-    default: null
-  },
-  breakEnd: {
-    type: String, // Optional
-    default: null
-  },
-  outTime: {
-    type: String, // Format: "HH:mm"
-    default: null
-  },
-  totalHours: {
-    type: Number,
-    default: 0
-  }
+  punches: [
+    {
+      time: {
+        type: String, // Format: "09:30 AM"
+        required: true
+      },
+      type: {
+        type: String,
+        enum: ["In", "Break In", "Break Out", "Out"],
+        required: true
+      }
+    }
+  ]
 });
 
 module.exports = mongoose.model("Attendance", attendanceSchema);

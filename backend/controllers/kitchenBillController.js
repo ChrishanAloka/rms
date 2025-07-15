@@ -4,7 +4,7 @@ const KitchenBill = mongoose.model("KitchenBill");
 // Get all bills
 exports.getBills = async (req, res) => {
   try {
-    const bills = await KitchenBill.find({});
+    const bills = await KitchenBill.find({}).sort({ date: -1 });
     res.json(bills);
   } catch (err) {
     res.status(500).json({ error: "Failed to load bills" });
