@@ -21,7 +21,10 @@ const menuSchema = new mongoose.Schema({
     enum: ["Appetizer", "Main Course", "Dessert", "Drink"],
     default: "Main Course"
   },
-  imageUrl: String,
+  imageUrl: {
+    type: String,
+    default: "https://storage.googleapis.com/your-menu-images-bucket/default.jpg "
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -40,6 +43,12 @@ const menuSchema = new mongoose.Schema({
     type: String,
     enum: ["In Stock", "Low Stock", "Out of Stock"],
     default: "In Stock"
+  },
+  netProfit: {
+    type: Number,
+    default: function () {
+      return this.price - this.cost;
+    }
   }
 });
 

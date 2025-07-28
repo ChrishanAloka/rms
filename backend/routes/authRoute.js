@@ -3,9 +3,17 @@
 const express = require("express");
 const router = express.Router();
 const { signup, login, getUsers, getSignupKeys, generateSignupKey, deleteSignupKey, updateUserRole, deactivateUser, reactivateUser } = require("../controllers/authController");
-const { getMenus, createMenu, updateMenu, deleteMenu } = require("../controllers/menuController");
+
+
+const multer = require("multer");
+const storage = multer.memoryStorage(); // For buffer upload
+const upload = multer({ storage });
+
+const menuController = require("../controllers/menuController");
+const { getMenus, deleteMenu } = require("../controllers/menuController");
+
 const authMiddleware = require("../middleware/authMiddleware");
-const upload = require("../middleware/uploadMiddleware");
+// const upload = require("../middleware/uploadMiddleware");
 // ✅ Add this line:
 const orderController = require("../controllers/orderController");
 const {getCustomerByPhone, updateOrderStatus} = require("../controllers/orderController");
@@ -39,6 +47,7 @@ const deliveryChargeController = require("../controllers/deliveryChargeControlle
 
 const driverController = require("../controllers/driverController");
 
+
 // Public routes
 router.post("/signup", signup);
 router.post("/login", login);
@@ -58,10 +67,9 @@ router.put("/user/reactivate/:id", authMiddleware(["admin"]), reactivateUser);
 // Admin & Kitchen can manage menus
 // backend/routes/authRoute.js
 router.get("/menus", authMiddleware(["admin", "kitchen", "cashier"]), getMenus);
-router.post("/menu", authMiddleware(["admin", "kitchen"]), upload.single("image"), createMenu);
-// backend/routes/authRoute.js
-
-router.put("/menu/:id", authMiddleware(["admin", "kitchen"]), upload.single("image"), updateMenu);
+// router.post("/menu", authMiddleware(["admin", "kitchen"]), upload.single("image"), createMenu);
+router.post("/menu", authMiddleware(["admin", "kitchen"]), upload.single("image"), menuController.createMenu);
+router.put("/menu/:id", authMiddleware(["admin", "kitchen"]), upload.single("image"), menuController.updateMenu);
 router.delete("/menu/:id", authMiddleware(["admin", "kitchen"]), deleteMenu);
 
 // backend/routes/authRoute.js

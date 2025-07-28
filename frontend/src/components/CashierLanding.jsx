@@ -436,12 +436,16 @@ const finalTotal = subtotal + serviceCharge + deliveryCharge;
               const lowStock = menu.currentQty <= menu.minimumQty;
 
               return(
-              <div key={menu._id} className="col-md-3 col-lg-3 col-xl-2">
+              <div key={menu._id} className="col-md-4 col-lg-3 col-xl-2">
                 <div className="card shadow-sm h-100 border-0">
                   <img
-                    src={`http://${window.location.hostname}:5000${menu.imageUrl}`}
+                    src={
+                    menu.imageUrl.startsWith("https")
+                      ? menu.imageUrl
+                      : `https://rms-6one.onrender.com${menu.imageUrl}`
+                  }
                     alt={menu.name}
-                    style={{ height: "150px", objectFit: "cover" }}
+                    style={{ height: "150px", width:"100%" ,objectFit: "contain" }}
                     onError={(e) => {
                       e.target.src = "https://via.placeholder.com/300x200?text=No+Image";
                     }}
